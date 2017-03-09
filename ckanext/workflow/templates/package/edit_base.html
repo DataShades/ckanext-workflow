@@ -1,0 +1,53 @@
+{% ckan_extends %}
+
+{% block content_action %}
+  {% set wf_stage = h.get_stage_from_package(pkg) %}
+
+  {% if h.check_access('move_to_next_stage') and wf_stage and wf_stage.approve() %}
+    <a class="btn"  href="{{ h.url_for('workflow_approve', id=pkg.name) }}">{{ _(wf_stage.approval_msg) }}</a>
+  {% endif %}
+  {% if h.check_access('move_to_next_stage') and wf_stage and wf_stage.reject()  %}
+    {% if wf_stage.rejection_effect %}
+      <a class="btn" data-toggle="modal" href="#rejection-modal">{{ _(wf_stage.reject_msg) }}</a>
+    {% else %}
+      <a class="btn"  href="{{ h.url_for('workflow_reject', id=pkg.name) }}">{{  _(wf_stage.reject_msg) }}</a>
+    {% endif %}
+
+  {% endif %}
+  {{ super() }}
+{% endblock %}
+
+
+
+
+{% block primary %}
+  {{ super() }}
+
+  <div class="modal fade" id="rejection-modal" aria-hidden="true" style="display:none">
+    <div class="modal-dialog">
+      <div class="modal-content">
+	<div class="modal-header">
+	  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	  <h4 class="modal-title">Confirmation</h4>
+	</div>
+	<div class="modal-body">
+          <form action="{{ h.url_for('workflow_reject', id=pkg.name) }}" method="post" id="reason-of-rejection">
+
+            <div class="form-group">
+	      <label for="reason-text" class="col-sm-2 control-label">Provide a reason of this action</label>
+	      <div class="col-sm-10">
+		<textarea name="reason" id="reason-text" class="form-control"  cols="60" style="resize:none" rows="3" required="required"></textarea>
+	      </div>
+            </div>
+
+          </form>
+	</div>
+	<div class="modal-footer">
+	  <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+	  <button type="submit" form="reason-of-rejection" class="btn btn-primary">Confirm</button>
+	</div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

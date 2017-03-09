@@ -1,0 +1,10 @@
+{% ckan_extends %}
+
+{% block heading_meta %}
+  {% set wf_stage = h.get_stage_from_package(package) %}
+  {% if wf_stage %}
+    <span class="label label-info">{{ _(wf_stage.label) }}</span>
+  {% endif %}
+  {{ super() }}
+
+{% endblock %}

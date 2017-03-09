@@ -1,0 +1,2 @@
+include README.rst
+recursive-include ckanext/workflow *.html *.json *.js *.less *.css *.mo
