@@ -1,0 +1,28 @@
+{% extends "page.html" %}
+
+{% block subtitle %}{{ _('About') }}{% endblock %}
+
+{% block breadcrumb_content %}
+  <li class="active">{% link_for _('Approvals'), controller='ckanext.workflow.controller:WorkflowController', action='pending_list' %}</li>
+{% endblock %}
+
+{% block primary %}
+  <article class="module">
+    <div class="module-content">
+      <h3>Waiting for approval:</h3>
+      <ul>
+
+      {% for package in datasets %}
+        <li>
+          {% link_for package.title, controller='package', action='read', id=package.name %}
+        </li>
+      {% else %}
+        <span>There are no pending datasets</span>
+      {% endfor %}
+      </ul>
+
+   </div>
+  </article>
+{% endblock %}
+
+{% block secondary %}{% endblock %}
