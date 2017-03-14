@@ -9,7 +9,6 @@ def get_auth():
     return dict(
         move_to_next_stage=move_to_next_stage,
         move_to_previous_stage=move_to_previous_stage,
-        reset_to_initial_stage=reset_to_initial_stage,
         create_dataset_revision=create_dataset_revision,
         merge_dataset_revision=merge_dataset_revision
     )
@@ -43,10 +42,6 @@ def move_to_previous_stage(context, data_dict):
     return _success(False)
 
 
-def reset_to_initial_stage(context, data_dict):
-    return _success(False)
-
-
 @tk.auth_sysadmins_check
 def create_dataset_revision(context, data_dict):
     workflow, _ = workflow_helpers.get_workflow_from_package(data_dict)
@@ -62,4 +57,4 @@ def create_dataset_revision(context, data_dict):
 
 
 def merge_dataset_revision(context, data_dict):
-    return authz.is_authorized('sysamin', context, data_dict)
+    return _success(workflow_helpers.is_site_admin())

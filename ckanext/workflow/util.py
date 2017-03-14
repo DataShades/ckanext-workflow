@@ -11,7 +11,8 @@ roles = Roles('creator', 'site_admin', 'editor')
 
 
 class WorkflowStage:
-
+    """Representation of workflow step.
+    """
     @classmethod
     def linearize_stages(cls, *stages):
         def linearizer(prev, next):
@@ -89,6 +90,9 @@ class WorkflowStage:
 class Workflow:
 
     _registry = {}
+    start = None
+    finish = None
+    stages = {}
 
     @classmethod
     def get_workflow(cls, type):

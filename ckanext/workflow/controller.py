@@ -8,6 +8,11 @@ import ckanext.workflow.helpers as wh
 
 class WorkflowController(base.BaseController):
     def approve(self, id):
+        """Approve common dataset.
+
+        If package just've got its last stage and it looks like
+        revision - redirects to merge_revision route
+        """
         context = {
             'user': c.user,
             'model': model
@@ -62,7 +67,6 @@ class WorkflowController(base.BaseController):
 
         return base.redirect(
             h.url_for(controller='package', action='read', id=pkg['id']))
-
 
     def pending_list(self):
         context = {'model': model,

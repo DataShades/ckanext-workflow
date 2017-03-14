@@ -18,14 +18,20 @@ def get_helpers():
 
 
 def is_revision(package):
+    """It IS revision if it has reference to origin.
+    """
     return get_original_dataset_id_from_package(package)
 
 
 def get_dataset_revision(id):
+    """Return first dataset from revision query or nothing.
+    """
     return get_dataset_revision_query(id).first()
 
 
 def get_dataset_revision_query(id):
+    """Ask for dataset that looks like revision for `id`.
+    """
     return model.Session.query(model.Package).join(
         model.PackageExtra
     ).filter_by(
@@ -52,12 +58,7 @@ def _workflow_stage_field():
 
 
 def get_workflow_from_package(pkg):
-    """FIXME! briefly describe function
-
-    :param pkg:
-    :returns:
-    :rtype:
-
+    """Return workflow object and its name based on workflow type from package.
     """
     if isinstance(pkg, model.Package):
         data = pkg.extras
@@ -73,6 +74,8 @@ def get_workflow_from_package(pkg):
 
 
 def get_stage_from_package(pkg):
+    """Return stage object based on package extras.
+    """
     wf, _ = get_workflow_from_package(pkg)
     if wf is None:
         return None
@@ -104,7 +107,3 @@ def get_original_dataset_id_from_package(pkg):
 
 def is_site_admin(user):
     return user.sysadmin
-    # ids = [g.id for g in model.Group.get_top_level_groups('organization')]
-    # return authz._has_user_permission_for_groups(
-    #     user.id, 'admin', ids
-    # )
