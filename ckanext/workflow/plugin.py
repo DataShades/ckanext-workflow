@@ -22,15 +22,18 @@ log = logging.getLogger(__name__)
 
 def submit_for_approval(context, pkg):
     site_admin_email = workflow_helpers.get_site_admin_email()
-
+    dataset_type = 'SEED dataset'
+    if workflow_helpers.get_original_dataset_id_from_package(pkg):
+        dataset_type = 'revision for SEED dataset'
     if site_admin_email:
         try:
             mailer.mail_recipient(
                 'Admin', site_admin_email, 'Submission for approval',
                 (
-                    'A new SEED dataset {title} ({dataset_url}) has'
+                    'A new {type} {title} ({dataset_url}) has'
                     ' been submitted for publication approval by {creator}.'
                 ).format(
+                    type=dataset_type,
                     title=pkg['title'],
                     dataset_url=helpers.url_for(
                         'dataset_read', id=pkg['id'], qualified=True),
@@ -41,10 +44,9 @@ def submit_for_approval(context, pkg):
             log.error('[workflow email] {0}'.format(e))
 
 
-def _approval_preparation(context, pkg, message, data=None):
-    reason = 'Not defined'
-    if data and 'reason' in data:
-        reason = data['reason']
+def _approval_preparation(context, pkg, message, data={}):
+    reason = data.get('reason', 'Not defined')
+    subject = data.get('subject', '')
     author = model.User.get(pkg['creator_user_id'])
 
     try:
@@ -57,7 +59,7 @@ def _approval_preparation(context, pkg, message, data=None):
 
         mailer.mail_recipient(
             author.fullname or author.name,
-            author.email, 'SEED dataset rejection',
+            author.email, subject,
             message.format(
                 title=pkg['title'],
                 dataset_url=helpers.url_for(
@@ -75,13 +77,15 @@ def reject_approval(context, pkg, data):
                ' rejected for publication by {admin}.\n'
                'Reason:\n'
                '{reason}')
+    data['subject'] = 'SEED dataset rejection'
     return _approval_preparation(context, pkg, message, data)
 
 
 def approve_approval(context, pkg):
     message = ('Your SEED dataset {title} ({dataset_url}) was'
                ' approved for publication by {admin}.')
-    return _approval_preparation(context, pkg, message)
+    return _approval_preparation(context, pkg, message, {
+        'subject': 'SEED dataset approval'})
 
 
 class WorkflowPlugin(plugins.SingletonPlugin):
@@ -143,16 +147,25 @@ class WorkflowPlugin(plugins.SingletonPlugin):
         ctrl = 'ckanext.workflow.controller:WorkflowController'
         map.connect(
             'workflow_approve',
-            '/dataset/workflow/{id}/approve',
+            '/workflow/dataset/{id}/approve',
             controller=ctrl, action='approve')
         map.connect(
             'workflow_reject',
-            '/dataset/workflow/{id}/reject',
+            '/workflow/dataset/{id}/reject',
             controller=ctrl, action='reject')
         map.connect(
             'workflow_pending_list',
-            '/dataset/workflow_approvals',
+            '/workflow/approvals',
             controller=ctrl, action='pending_list')
+        map.connect(
+            'merge_dataset_revision',
+            '/workflow/dataset/{id}/merge_revision',
+            controller=ctrl, action='merge_revision')
+        map.connect(
+            'create_dataset_revision',
+            '/workflow/dataset/{id}/create_revision',
+            controller=ctrl, action='create_revision')
+
         return map
 
     # IPackageController

@@ -2,17 +2,15 @@
 
 {% block content_action %}
   {% set wf_stage = h.get_stage_from_package(pkg) %}
-
-  {% if h.check_access('move_to_next_stage') and wf_stage and wf_stage.approve() %}
+  {% if h.check_access('move_to_next_stage', pkg) and wf_stage and wf_stage.approve() %}
     <a class="btn"  href="{{ h.url_for('workflow_approve', id=pkg.name) }}">{{ _(wf_stage.approval_msg) }}</a>
   {% endif %}
-  {% if h.check_access('move_to_next_stage') and wf_stage and wf_stage.reject()  %}
+  {% if h.check_access('move_to_next_stage', pkg) and wf_stage and wf_stage.reject()  %}
     {% if wf_stage.rejection_effect %}
       <a class="btn" data-toggle="modal" href="#rejection-modal">{{ _(wf_stage.reject_msg) }}</a>
     {% else %}
       <a class="btn"  href="{{ h.url_for('workflow_reject', id=pkg.name) }}">{{  _(wf_stage.reject_msg) }}</a>
     {% endif %}
-
   {% endif %}
   {{ super() }}
 {% endblock %}

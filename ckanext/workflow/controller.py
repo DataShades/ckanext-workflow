@@ -1,18 +1,27 @@
 import ckan.plugins.toolkit as tk
 import ckan.lib.base as base
+import ckan.lib.helpers as h
 import ckan.model as model
 from ckan.common import c, request, _
 import ckanext.workflow.helpers as wh
 
 
 class WorkflowController(base.BaseController):
-    def approve(self, id=123):
+    def approve(self, id):
         context = {
             'user': c.user,
             'model': model
         }
-        tk.get_action('move_to_next_stage')(context, {'id': id})
         endpoint = request.referrer or '/'
+
+        pkg = tk.get_action('package_show')(context, {'id': id})
+        wf, _ = wh.get_workflow_from_package(pkg)
+
+        next = str(wh.get_stage_from_package(pkg).approve())
+        if next == str(wf.finish) and wh.is_revision(pkg):
+            endpoint = h.url_for('merge_dataset_revision', id=id)
+        tk.get_action('move_to_next_stage')(context, {'id': id})
+
         return base.redirect(endpoint)
 
     def reject(self, id):
@@ -27,6 +36,33 @@ class WorkflowController(base.BaseController):
         })
         endpoint = request.referrer or '/'
         return base.redirect(endpoint)
+
+    def create_revision(self, id):
+        context = {
+            'user': c.user,
+            'model': model
+        }
+
+        pkg = tk.get_action('create_dataset_revision')(context, {
+            'id': id,
+        })
+
+        return base.redirect(
+            h.url_for(controller='package', action='read', id=pkg['id']))
+
+    def merge_revision(self, id):
+        context = {
+            'user': c.user,
+            'model': model
+        }
+
+        pkg = tk.get_action('merge_dataset_revision')(context, {
+            'id': id
+        })
+
+        return base.redirect(
+            h.url_for(controller='package', action='read', id=pkg['id']))
+
 
     def pending_list(self):
         context = {'model': model,

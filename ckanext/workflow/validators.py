@@ -3,14 +3,25 @@
 from ckan.logic.validators import Invalid, missing
 from ckanext.workflow.util import Workflow
 import ckanext.workflow.helpers as h
-import ckan.model as model
 
 
 def get_validators():
     return dict(
         workflow_type_validator=workflow_type_validator,
-        workflow_stage_validator=workflow_stage_validator
+        workflow_stage_validator=workflow_stage_validator,
+        revision_field_validator=revision_field_validator
     )
+
+
+def revision_field_validator(key, data, errors, context):
+    pkg = context.get('package')
+
+    if pkg:
+        data[key] = pkg.extras.get(h._revision_field())
+
+    value = data[key]
+    if value is missing:
+        data[key] = None
 
 
 def workflow_type_validator(key, data, errors, context):
@@ -33,10 +44,14 @@ def workflow_stage_validator(key, data, errors, context):
     wf = Workflow.get_workflow(type)
     first_stage = str(wf.start)
 
+    pkg = context.get('package')
+
     if stage is missing or not stage:
+        if pkg:
+            first_stage = pkg.extras.get(
+                h._workflow_stage_field()) or first_stage
         data[key] = first_stage
         return
-    pkg = context.get('package')
     if pkg is None and stage != first_stage:
         raise Invalid('You cannot skip fist stage')
     current_stage = pkg.extras.get(key[0])

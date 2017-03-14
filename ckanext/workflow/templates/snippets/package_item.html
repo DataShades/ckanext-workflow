@@ -5,6 +5,11 @@
   {% if wf_stage %}
     <span class="label label-info">{{ _(wf_stage.label) }}</span>
   {% endif %}
+
+  {% if h.is_revision(package) %}
+    <span class="label label-warning">{{ _('Revision') }}</span>
+  {% endif %}
+
   {{ super() }}
 
 {% endblock %}

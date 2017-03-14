@@ -1,0 +1,14 @@
+{% ckan_extends %}
+
+
+{% block content_action %}
+  {% set revision = h.get_dataset_revision(pkg.id)  %}
+  {% if h.check_access('create_dataset_revision', pkg) %}
+    <a class="btn"  href="{{ h.url_for('create_dataset_revision', id=pkg.name) }}">{{ _('Create revision') }}</a>
+  {% elif revision %}
+    <a class="btn"  href="{{ h.url_for(controller='package', action='read', id=revision.name) }}">{{ _('View revision') }}</a>
+  {% endif %}
+
+  {{ super() }}
+
+{% endblock %}

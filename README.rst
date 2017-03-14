@@ -60,9 +60,19 @@ To install ckanext-workflow:
               "label": "Workflow state",
               "form_snippet": null,
               "validators": "workflow_stage_validator"
+          },
+          {
+              "field_name": "original_id_of_revision",
+              "label": "Original dataset",
+              "preset": "revision_field"
           }
 
-5. Restart CKAN. For example if you've deployed CKAN with Apache on Ubuntu::
+5. Add workflow presets to scheming(`ckanext.workflow:presets.json`)::
+
+     scheming.presets = ckanext.scheming:presets.json ckanext.workflow:presets.json
+
+
+6. Restart CKAN. For example if you've deployed CKAN with Apache on Ubuntu::
 
      sudo service apache2 reload
 
@@ -77,7 +87,6 @@ Document any optional config settings here. For example::
     # (optional, default: None).
 
     workflow.site_admin.email = email@example.com
-
 
 ------------------------
 Development Installation

@@ -11,12 +11,36 @@ log = logging.getLogger(__name__)
 def get_helpers():
     return dict(
         get_workflow_from_package=get_workflow_from_package,
-        get_stage_from_package=get_stage_from_package
+        get_stage_from_package=get_stage_from_package,
+        get_dataset_revision=get_dataset_revision,
+        is_revision=is_revision
+    )
+
+
+def is_revision(package):
+    return get_original_dataset_id_from_package(package)
+
+
+def get_dataset_revision(id):
+    return get_dataset_revision_query(id).first()
+
+
+def get_dataset_revision_query(id):
+    return model.Session.query(model.Package).join(
+        model.PackageExtra
+    ).filter_by(
+            key=_revision_field(),
+            value=id
     )
 
 
 def get_site_admin_email():
     return config.get('workflow.site_admin.email')
+
+
+def _revision_field():
+    return config.get(
+        'workflow.revision_field_name', 'original_id_of_revision')
 
 
 def _workflow_type_field():
@@ -65,6 +89,17 @@ def get_stage_from_package(pkg):
         except KeyError:
             log.debug('[workflow] Unable to find stage `{0}`'.format(stage))
             return None
+
+
+def get_original_dataset_id_from_package(pkg):
+
+    if isinstance(pkg, model.Package):
+        data = pkg.extras
+    else:
+        data = pkg
+
+    id = data.get(_revision_field())
+    return id
 
 
 def is_site_admin(user):
