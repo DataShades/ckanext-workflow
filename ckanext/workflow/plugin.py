@@ -48,6 +48,9 @@ def _approval_preparation(context, pkg, message, data={}):
     reason = data.get('reason', 'Not defined')
     subject = data.get('subject', '')
     author = model.User.get(pkg['creator_user_id'])
+    type = 'SEED dataset'
+    if workflow_helpers.get_original_dataset_id_from_package(pkg):
+        type = 'revision for SEED dataset'
 
     try:
         if author is None:
@@ -61,6 +64,7 @@ def _approval_preparation(context, pkg, message, data={}):
             author.fullname or author.name,
             author.email, subject,
             message.format(
+                type=type,
                 title=pkg['title'],
                 dataset_url=helpers.url_for(
                     'dataset_read', id=pkg['id'], qualified=True),
@@ -73,7 +77,7 @@ def _approval_preparation(context, pkg, message, data={}):
 
 
 def reject_approval(context, pkg, data):
-    message = ('Your SEED dataset {title} ({dataset_url}) was'
+    message = ('Your {type} {title} ({dataset_url}) was'
                ' rejected for publication by {admin}.\n'
                'Reason:\n'
                '{reason}')
@@ -82,7 +86,7 @@ def reject_approval(context, pkg, data):
 
 
 def approve_approval(context, pkg):
-    message = ('Your SEED dataset {title} ({dataset_url}) was'
+    message = ('Your {type} {title} ({dataset_url}) was'
                ' approved for publication by {admin}.')
     return _approval_preparation(context, pkg, message, {
         'subject': 'SEED dataset approval'})
