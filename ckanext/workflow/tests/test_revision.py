@@ -1,11 +1,12 @@
 import mock
+import ckan.model as model
 import ckan.plugins.toolkit as tk
 import ckan.tests.helpers as th
 import nose.tools as nt
 import ckan.tests.factories as factories
+from ckan.tests.legacy.pylons_controller import PylonsTestCase
 
-
-class TestRevision:
+class TestRevision(PylonsTestCase):
 
     def setup(self):
         th.reset_db()
@@ -69,3 +70,57 @@ class TestRevision:
             nt.assert_in(pkg['title'], text)
             nt.assert_in('new revision', text)
             nt.assert_in(user['name'], text)
+
+    def test_only_org_member_can_create_revision(self):
+        user = factories.User()
+        simple_user = factories.User()
+        org = factories.Organization(users=[
+            {'name': user['name'], 'capacity': 'editor'}
+        ])
+        self.user = user
+        self.simple_user = simple_user
+        self.org = org
+
+        pkg = factories.Dataset(owner_org=org['id'])
+        th.call_action('move_to_next_stage', id=pkg['id'])
+        data = th.call_action('move_to_next_stage', id=pkg['id'])
+        pkg.update(data)
+
+        th.call_auth('create_dataset_revision',
+                     {'model': model, 'user': user['name']}, **pkg)
+        nt.assert_raises(
+            tk.NotAuthorized,
+            th.call_auth, 'create_dataset_revision',
+            {'model': model, 'user': simple_user['name']}, **pkg
+        )
+
+    def test_only_org_member_can_view_revision(self):
+        user = factories.User()
+        simple_user = factories.User()
+        org = factories.Organization(users=[
+            {'name': user['name'], 'capacity': 'editor'}
+        ])
+        self.user = user
+        self.simple_user = simple_user
+        self.org = org
+
+        pkg = factories.Dataset(owner_org=org['id'])
+        th.call_action('move_to_next_stage', id=pkg['id'])
+        data = th.call_action('move_to_next_stage', id=pkg['id'])
+        pkg.update(data)
+        revision = th.call_action(
+            'create_dataset_revision',
+            {'user': user['name']},
+            id=pkg['id'])
+
+        th.call_auth(
+            'read_dataset_revision',
+            {'model': model, 'user': user['name']},
+            **revision
+        )
+        nt.assert_raises(
+            tk.NotAuthorized,
+            th.call_auth, 'read_dataset_revision',
+            {'model': model, 'user': simple_user['name']},
+            **revision
+        )

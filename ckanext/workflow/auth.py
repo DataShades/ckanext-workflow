@@ -10,6 +10,7 @@ def get_auth():
         move_to_next_stage=move_to_next_stage,
         move_to_previous_stage=move_to_previous_stage,
         create_dataset_revision=create_dataset_revision,
+        read_dataset_revision=read_dataset_revision,
         merge_dataset_revision=merge_dataset_revision
     )
 
@@ -53,6 +54,13 @@ def create_dataset_revision(context, data_dict):
         return _success(False, 'Cannot create revision of revision')
     if workflow_helpers.get_dataset_revision_query(data_dict['id']).count():
         return _success(False, 'Dataset already has revision')
+    return authz.is_authorized('package_create', context, data_dict)
+
+
+def read_dataset_revision(context, data_dict):
+
+    authz.has_user_permission_for_group_or_org(
+        data_dict.get('owner_org'), context['user'], 'create_dataset')
     return authz.is_authorized('package_create', context, data_dict)
 
 

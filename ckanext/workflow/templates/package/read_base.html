@@ -5,7 +5,7 @@
   {% set revision = h.get_dataset_revision(pkg.id)  %}
   {% if h.check_access('create_dataset_revision', pkg) %}
     <a class="btn"  href="{{ h.url_for('create_dataset_revision', id=pkg.name) }}">{{ _('Create revision') }}</a>
-  {% elif revision %}
+  {% elif revision and h.check_access('read_dataset_revision', revision.as_dict()) %}
     <a class="btn"  href="{{ h.url_for(controller='package', action='read', id=revision.name) }}">{{ _('View revision') }}</a>
   {% endif %}
 
