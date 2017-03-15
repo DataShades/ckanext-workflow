@@ -92,6 +92,37 @@ def approve_approval(context, pkg):
         'subject': 'SEED dataset approval'})
 
 
+def unpublish_dataset(context, pkg, data={}):
+    reason = data.get('reason', 'Not defined')
+    subject = 'SEED dataset was unpublished'
+    author = model.User.get(pkg['creator_user_id'])
+    message = ("The SEED dataset {title} ({dataset_url})"
+               " has been unpublished by {admin}.\n"
+               "Reason:\n"
+               "{reason}")
+    try:
+        if author is None:
+            raise Exception('User <{0}> not found'.format(
+                pkg['creator_user_id']))
+        if not author.email:
+            raise Exception('User <{0}> has no email'.format(
+                author.name))
+
+        mailer.mail_recipient(
+            author.fullname or author.name,
+            author.email, subject,
+            message.format(
+                title=pkg['title'],
+                dataset_url=helpers.url_for(
+                    'dataset_read', id=pkg['id'], qualified=True),
+                admin=context['user'],
+                reason=reason
+             )
+        )
+    except Exception as e:
+        log.error('[workflow email] {0}'.format(e))
+
+
 class WorkflowPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IConfigurer)
     plugins.implements(IWorkflow)
@@ -116,6 +147,8 @@ class WorkflowPlugin(plugins.SingletonPlugin):
         second_stage = Workflow.get_workflow('base').start.approve()
         second_stage.rejection_effect = reject_approval
         second_stage.approval_effect = approve_approval
+        last_stage = Workflow.get_workflow('base').finish
+        last_stage.rejection_effect = unpublish_dataset
 
     # IWorkflow
 
@@ -169,6 +202,10 @@ class WorkflowPlugin(plugins.SingletonPlugin):
             'create_dataset_revision',
             '/workflow/dataset/{id}/create_revision',
             controller=ctrl, action='create_revision')
+        map.connect(
+            'purge_unpublished_dataset',
+            '/workflow/dataset/{id}/purge',
+            controller=ctrl, action='purge')
 
         return map
 

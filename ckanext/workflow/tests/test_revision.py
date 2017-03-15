@@ -6,6 +6,7 @@ import nose.tools as nt
 import ckan.tests.factories as factories
 from ckan.tests.legacy.pylons_controller import PylonsTestCase
 
+
 class TestRevision(PylonsTestCase):
 
     def setup(self):
@@ -174,3 +175,33 @@ class TestRevision(PylonsTestCase):
             nt.assert_in(pkg['title'], text)
             nt.assert_in('revision', text)
             nt.assert_in(sysadmin['name'], text)
+
+    def test_revision_can_be_purged_by_org_editor(self):
+        user = factories.User()
+        other_user = factories.User()
+        simple_user = factories.User()
+        org = factories.Organization(users=[
+            {'name': user['name'], 'capacity': 'editor'},
+            {'name': other_user['name'], 'capacity': 'editor'}
+        ])
+        self.user = user
+        self.simple_user = simple_user
+        self.org = org
+
+        pkg = factories.Dataset(owner_org=org['id'])
+        th.call_action('move_to_next_stage', id=pkg['id'])
+        th.call_action('move_to_next_stage', id=pkg['id'])
+
+        revision = th.call_action(
+            'create_dataset_revision',
+            {'user': user['name']},
+            id=pkg['id'])
+
+        th.call_auth('purge_unpublished_dataset',
+                     {'model': model, 'user': user['name']}, **revision)
+        th.call_auth('purge_unpublished_dataset',
+                     {'model': model, 'user': other_user['name']}, **revision)
+        nt.assert_raises(
+            tk.NotAuthorized,
+            th.call_auth, 'purge_unpublished_dataset',
+            {'model': model, 'user': simple_user['name']}, **revision)

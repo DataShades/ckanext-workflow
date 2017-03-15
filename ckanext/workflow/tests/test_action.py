@@ -120,6 +120,34 @@ class TestWorkflow:
             nt.assert_in(pkg['title'], text)
             nt.assert_in(sysadmin['name'], text)
 
+    @th.change_config('workflow.site_admin.email', 'example@example.com')
+    def test_unpublish_email(self):
+        user = factories.User()
+        sysadmin = factories.Sysadmin()
+        pkg = factories.Dataset(user=user)
+
+        with mock.patch('ckan.lib.mailer.mail_recipient') as mock_mail:
+            th.call_action(
+                'move_to_next_stage',
+                {'user': user['name']}, id=pkg['id'])
+
+            th.call_action(
+                'move_to_next_stage',
+                {'user': sysadmin['name']}, id=pkg['id'])
+            th.call_action(
+                'move_to_previous_stage',
+                {'user': sysadmin['name']}, id=pkg['id'], reason='Test reason')
+            nt.assert_true(mock_mail.called)
+            args = mock_mail.call_args[0]
+            subject = args[2]
+            nt.assert_in('unpublished', subject)
+
+            text = args[3]
+            nt.assert_in('unpublished', text)
+            nt.assert_in('Test reason', text)
+            nt.assert_in(pkg['title'], text)
+            nt.assert_in(sysadmin['name'], text)
+
     def test_move_to_published_stage(self):
         pkg = factories.Dataset()
         data = th.call_action('move_to_next_stage', id=pkg['id'])

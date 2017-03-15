@@ -11,7 +11,8 @@ def get_auth():
         move_to_previous_stage=move_to_previous_stage,
         create_dataset_revision=create_dataset_revision,
         read_dataset_revision=read_dataset_revision,
-        merge_dataset_revision=merge_dataset_revision
+        merge_dataset_revision=merge_dataset_revision,
+        purge_unpublished_dataset=purge_unpublished_dataset
     )
 
 
@@ -58,9 +59,14 @@ def create_dataset_revision(context, data_dict):
 
 
 def read_dataset_revision(context, data_dict):
+    # authz.has_user_permission_for_group_or_org(
+    #     data_dict.get('owner_org'), context['user'], 'create_dataset')
+    return authz.is_authorized('package_create', context, data_dict)
 
-    authz.has_user_permission_for_group_or_org(
-        data_dict.get('owner_org'), context['user'], 'create_dataset')
+
+def purge_unpublished_dataset(context, data_dict):
+    # authz.has_user_permission_for_group_or_org(
+    #     data_dict.get('owner_org'), context['user'], 'create_dataset')
     return authz.is_authorized('package_create', context, data_dict)
 
 

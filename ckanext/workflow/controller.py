@@ -88,3 +88,18 @@ class WorkflowController(base.BaseController):
         }
 
         return base.render('workflow/pending_list.html', extra_vars=extra_vars)
+
+    def purge(self, id):
+        context = {'model': model,
+                   'user': c.user, 'auth_user_obj': c.userobj}
+
+        try:
+            pkg = tk.get_action('package_show')(context, {'id': id})
+            del context['package']
+            tk.check_access('purge_unpublished_dataset', context, pkg)
+        except tk.NotAuthorized:
+            base.abort(401, _('Not authorized to see this page'))
+
+        context['ignore_auth'] = True
+        tk.get_action('dataset_purge')(context, {'id': id})
+        return base.redirect(h.url_for(controller='package', action='search'))
