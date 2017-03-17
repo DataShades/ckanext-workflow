@@ -51,6 +51,11 @@ def _approval_preparation(context, pkg, message, data={}):
     type = 'SEED dataset'
     if workflow_helpers.get_original_dataset_id_from_package(pkg):
         type = 'revision for SEED dataset'
+    if 'dataset_url' not in data:
+        dataset_url = helpers.url_for(
+            'dataset_read', id=pkg['id'], qualified=True)
+    else:
+        dataset_url = data['dataset_url']
 
     try:
         if author is None:
@@ -66,8 +71,7 @@ def _approval_preparation(context, pkg, message, data={}):
             message.format(
                 type=type,
                 title=pkg['title'],
-                dataset_url=helpers.url_for(
-                    'dataset_read', id=pkg['id'], qualified=True),
+                dataset_url=dataset_url,
                 admin=context['user'],
                 reason=reason
              )
@@ -85,11 +89,16 @@ def reject_approval(context, pkg, data):
     return _approval_preparation(context, pkg, message, data)
 
 
-def approve_approval(context, pkg):
+def approve_approval(context, pkg, data={}):
     message = ('Your {type} {title} ({dataset_url}) was'
                ' approved for publication by {admin}.')
-    return _approval_preparation(context, pkg, message, {
-        'subject': 'SEED dataset approval'})
+    data['subject'] = 'SEED dataset approval'
+    original_id = workflow_helpers.get_original_dataset_id_from_package(pkg)
+    if original_id:
+        data['dataset_url'] = helpers.url_for(
+            'dataset_read', id=original_id, qualified=True)
+
+    return _approval_preparation(context, pkg, message, data)
 
 
 def unpublish_dataset(context, pkg, data={}):

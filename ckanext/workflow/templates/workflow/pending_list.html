@@ -15,6 +15,9 @@
       {% for package in datasets %}
         <li>
           {% link_for package.title, controller='package', action='read', id=package.name %}
+          {% if h.is_revision(package) %}
+            <span class="label label-warning">revision</span>
+          {% endif %}
         </li>
       {% else %}
         <span>There are no pending datasets</span>
