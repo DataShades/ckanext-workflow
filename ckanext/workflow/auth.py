@@ -15,7 +15,8 @@ def get_auth():
         read_dataset_revision=read_dataset_revision,
         merge_dataset_revision=merge_dataset_revision,
         purge_unpublished_dataset=purge_unpublished_dataset,
-        package_update=package_update
+        package_update=package_update,
+        workflow_rescind_dataset=workflow_rescind_dataset
     )
 
 
@@ -44,6 +45,21 @@ def move_to_previous_stage(context, data_dict):
         user = model.User.get(context['user'])
         if user is not None and user.id == data_dict['creator_user_id']:
             return _success()
+    return _success(False)
+
+
+@tk.auth_sysadmins_check
+def workflow_rescind_dataset(context, data_dict):
+    wf, _ = workflow_helpers.get_workflow_from_package(data_dict)
+    stage = workflow_helpers.get_stage_from_package(data_dict)
+    if stage == wf.start:
+        return _success(False, 'Already on initial stage')
+    if stage == wf.finish:
+        return _success(False, 'Already on published stage')
+
+    user = model.User.get(context['user'])
+    if user is not None and user.id == data_dict['creator_user_id']:
+        return _success()
     return _success(False)
 
 

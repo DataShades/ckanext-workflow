@@ -42,6 +42,17 @@ class WorkflowController(base.BaseController):
         endpoint = request.referrer or '/'
         return base.redirect(endpoint)
 
+    def rescind(self, id):
+        context = {
+            'user': c.user,
+            'model': model
+        }
+        tk.get_action('workflow_rescind_dataset')(context, {
+            'id': id
+        })
+        return base.redirect(
+            h.url_for(controller='package', action='read', id=id))
+
     def create_revision(self, id):
         context = {
             'user': c.user,

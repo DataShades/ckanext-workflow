@@ -200,6 +200,10 @@ class WorkflowPlugin(plugins.SingletonPlugin):
             '/workflow/dataset/{id}/reject',
             controller=ctrl, action='reject')
         map.connect(
+            'workflow_rescind',
+            '/workflow/dataset/{id}/rescind',
+            controller=ctrl, action='rescind')
+        map.connect(
             'workflow_pending_list',
             '/workflow/approvals',
             controller=ctrl, action='pending_list')

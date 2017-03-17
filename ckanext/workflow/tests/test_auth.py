@@ -139,3 +139,22 @@ class TestAuth:
             tk.NotAuthorized, th.call_auth,
             'create_dataset_revision', _context(user), **revision
         )
+
+    def test_pending_dataset_can_be_rescind(self):
+        user = factories.User()
+        pkg = factories.Dataset(user=user)
+        nt.assert_raises(
+            tk.NotAuthorized, th.call_auth,
+            'workflow_rescind_dataset', _context(user), **pkg
+        )
+
+        data = th.call_action('move_to_next_stage', id=pkg['id'])
+        pkg.update(data)
+        th.call_auth('workflow_rescind_dataset', _context(user), **pkg)
+
+        data = th.call_action('move_to_next_stage', id=pkg['id'])
+        pkg.update(data)
+        nt.assert_raises(
+            tk.NotAuthorized, th.call_auth,
+            'workflow_rescind_dataset', _context(user), **pkg
+        )

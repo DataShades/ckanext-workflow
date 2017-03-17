@@ -19,7 +19,8 @@ def get_actions():
         move_to_next_stage=move_to_next_stage,
         move_to_previous_stage=move_to_previous_stage,
         create_dataset_revision=create_dataset_revision,
-        merge_dataset_revision=merge_dataset_revision
+        merge_dataset_revision=merge_dataset_revision,
+        workflow_rescind_dataset=workflow_rescind_dataset
     )
 
 
@@ -151,5 +152,23 @@ def move_to_previous_stage(context, data_dict):
 
     if callable(stage.rejection_effect):
         stage.rejection_effect(context, pkg_dict, data_dict)
+
+    return {field_name: str(next_stage)}
+
+
+def workflow_rescind_dataset(context, data_dict):
+    """Move package to initial stage in its workflow.
+
+    :param id: id or name of package
+    :returns:  dict with name of new stage
+    :rtype: dict
+
+    """
+
+    pkg_dict, stage, wf = _prepare_workflow_action(
+        context, data_dict, 'workflow_rescind_dataset')
+    next_stage = wf.start
+    field_name = workflow_helpers._workflow_stage_field()
+    _update_workflow_stage(field_name, str(next_stage), context['package'])
 
     return {field_name: str(next_stage)}
