@@ -31,7 +31,8 @@ def move_to_next_stage(context, data_dict):
     wf, _ = workflow_helpers.get_workflow_from_package(data_dict)
 
     stage = workflow_helpers.get_stage_from_package(data_dict)
-    if stage and roles.creator in stage.who_can_approve and stage.approve() is not None:
+    if (stage and roles.creator in stage.who_can_approve and
+            stage.approve() is not None):
         user = model.User.get(context['user'])
         if user is not None and user.id == data_dict['creator_user_id']:
             return _success()
@@ -41,7 +42,8 @@ def move_to_next_stage(context, data_dict):
 def move_to_previous_stage(context, data_dict):
     wf, _ = workflow_helpers.get_workflow_from_package(data_dict)
     stage = workflow_helpers.get_stage_from_package(data_dict)
-    if stage and roles.creator in stage.who_can_reject and stage.reject() is not None:
+    if (stage and roles.creator in stage.who_can_reject and
+            stage.reject() is not None):
         user = model.User.get(context['user'])
         if user is not None and user.id == data_dict['creator_user_id']:
             return _success()
