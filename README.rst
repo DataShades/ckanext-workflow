@@ -76,7 +76,6 @@ To install ckanext-workflow:
 
      sudo service apache2 reload
 
-
 ---------------
 Config Settings
 ---------------
@@ -100,6 +99,19 @@ do::
     python setup.py develop
     pip install -r dev-requirements.txt
 
+----------------
+Deployment Notes
+----------------
+
+If after adding this extension to existing CKAN instance, it would be disirable to
+add workflow fields to all existing datasets. You can mark all public/active datasets as
+published and all other as unpublished by executing next command::
+
+  $ paster workflow migrate -c config-file
+
+If you want to update particular dataset, you can run special case::
+
+  $ paster workflow migrate PACKAGE_ID_OR_NAME -c config-file
 
 -----------------
 Running the Tests
