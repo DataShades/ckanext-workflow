@@ -72,6 +72,20 @@ class TestRevision(PylonsTestCase):
             nt.assert_in('new revision', text)
             nt.assert_in(user['name'], text)
 
+    @th.change_config('workflow.site_admin.email', 'example@example.com, another@example.com')
+    def test_multiple_email(self):
+        user = factories.User()
+        pkg = factories.Dataset(user=user)
+        revision = th.call_action('create_dataset_revision', id=pkg['id'])
+        with mock.patch('ckan.lib.mailer.mail_recipient') as mock_mail:
+            th.call_action(
+                'move_to_next_stage',
+                {'user': user['name']}, id=revision['id'])
+            nt.assert_true(mock_mail.called)
+            nt.assert_equal(mock_mail.call_count, 2)
+            nt.assert_equal(mock_mail.call_args_list[0][0][1], 'example@example.com')
+            nt.assert_equal(mock_mail.call_args_list[1][0][1], 'another@example.com')
+
     def test_only_org_member_can_create_revision(self):
         user = factories.User()
         simple_user = factories.User()

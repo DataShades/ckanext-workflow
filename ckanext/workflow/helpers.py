@@ -41,7 +41,13 @@ def get_dataset_revision_query(id):
 
 
 def get_site_admin_email():
-    return config.get('workflow.site_admin.email')
+    emails = config.get('workflow.site_admin.email', '').split(',')
+    result = []
+    for email in emails:
+        email = email.strip()
+        if email:
+            result.append(email)
+    return result
 
 
 def _revision_field():
