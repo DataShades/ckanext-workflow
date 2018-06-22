@@ -82,6 +82,9 @@ setup(
         workflow=ckanext.workflow.plugin:WorkflowPlugin
 	[babel.extractors]
 	ckan = ckan.lib.extract:extract_ckan
+        [paste.paster_command]
+        workflow=ckanext.workflow.command:WorkflowCommand
+
     ''',
 
     # If you are changing from the default layout of your extension, you may

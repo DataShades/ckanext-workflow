@@ -32,21 +32,27 @@ def get_dataset_revision(id):
 def get_dataset_revision_query(id):
     """Ask for dataset that looks like revision for `id`.
     """
-    return model.Session.query(model.Package).join(
-        model.PackageExtra
-    ).filter_by(
-            key=_revision_field(),
-            value=id
-    )
+    return model.Session.query(model.Package).join(model.PackageExtra
+                                                   ).filter_by(
+                                                       key=_revision_field(),
+                                                       value=id
+                                                   )
 
 
 def get_site_admin_email():
-    return config.get('workflow.site_admin.email')
+    emails = config.get('workflow.site_admin.email', '').split(',')
+    result = []
+    for email in emails:
+        email = email.strip()
+        if email:
+            result.append(email)
+    return result
 
 
 def _revision_field():
     return config.get(
-        'workflow.revision_field_name', 'original_id_of_revision')
+        'workflow.revision_field_name', 'original_id_of_revision'
+    )
 
 
 def _workflow_type_field():
@@ -65,12 +71,15 @@ def get_workflow_from_package(pkg):
     else:
         data = pkg
 
-    wf_name = data.get(_workflow_type_field()) or 'base'
+    wf_name = data.get(_workflow_type_field())
     try:
         return Workflow.get_workflow(wf_name), wf_name
     except KeyError:
-        log.debug('[workflow] Unable to find workflow `{0}`'.format(wf_name))
-        return None, None
+        log.error(
+            'Unable to find workflow `{0}`. Using `base` instead'.
+            format(stage)
+        )
+        return Workflow.get_workflow('base'), 'base'
 
 
 def get_stage_from_package(pkg):
@@ -86,12 +95,14 @@ def get_stage_from_package(pkg):
         data = pkg
 
     stage = data.get(_workflow_stage_field())
-    if stage:
-        try:
-            return wf.get_stage(stage)
-        except KeyError:
-            log.debug('[workflow] Unable to find stage `{0}`'.format(stage))
-            return None
+    try:
+        return wf.get_stage(stage)
+    except KeyError:
+        log.error(
+            'Unable to find stage `{0}`. Using first stage instead'.
+            format(stage)
+        )
+        return wf.start
 
 
 def get_original_dataset_id_from_package(pkg):

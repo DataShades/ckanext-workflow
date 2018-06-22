@@ -1,10 +1,12 @@
+import logging
 import ckan.plugins as plugins
 from ckan.plugins.interfaces import IDomainObjectModification
-
 import ckan.plugins.toolkit as tk
 import ckan.model as model
 import ckanext.workflow.helpers as workflow_helpers
 
+
+log = logging.getLogger(__name__)
 
 ignored_fields = (
     'id',
@@ -39,7 +41,16 @@ def _prepare_workflow_action(context, data_dict, auth_name):
     tk.check_access(auth_name, context, pkg_dict)
 
     wf, _ = workflow_helpers.get_workflow_from_package(pkg_dict)
-    stage = wf.get_stage(pkg_dict[workflow_helpers._workflow_stage_field()])
+
+    current = pkg_dict.get(workflow_helpers._workflow_stage_field())
+    try:
+        stage = wf.get_stage(current)
+    except KeyError:
+        log.error(
+            'Unable to find stage `{0}`. Using first stage instead'.
+            format(current)
+        )
+        stage = wf.start
     return pkg_dict, stage, wf
 
 
