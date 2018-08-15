@@ -27,7 +27,7 @@ class WorkflowController(base.BaseController):
             endpoint = h.url_for('merge_dataset_revision', id=id)
         tk.get_action('move_to_next_stage')(context, {'id': id})
 
-        return base.redirect(endpoint)
+        return h.redirect_to(endpoint)
 
     def reject(self, id):
         context = {
@@ -40,7 +40,7 @@ class WorkflowController(base.BaseController):
             'reason': reason
         })
         endpoint = request.referrer or '/'
-        return base.redirect(endpoint)
+        return h.redirect_to(endpoint)
 
     def rescind(self, id):
         context = {
@@ -50,7 +50,7 @@ class WorkflowController(base.BaseController):
         tk.get_action('workflow_rescind_dataset')(context, {
             'id': id
         })
-        return base.redirect(
+        return h.redirect_to(
             h.url_for(controller='package', action='read', id=id))
 
     def create_revision(self, id):
@@ -63,7 +63,7 @@ class WorkflowController(base.BaseController):
             'id': id,
         })
 
-        return base.redirect(
+        return h.redirect_to(
             h.url_for(controller='package', action='read', id=pkg['id']))
 
     def merge_revision(self, id):
@@ -76,7 +76,7 @@ class WorkflowController(base.BaseController):
             'id': id
         })
 
-        return base.redirect(
+        return h.redirect_to(
             h.url_for(controller='package', action='read', id=pkg['id']))
 
     def pending_list(self):
@@ -113,4 +113,4 @@ class WorkflowController(base.BaseController):
 
         context['ignore_auth'] = True
         tk.get_action('dataset_purge')(context, {'id': id})
-        return base.redirect(h.url_for(controller='package', action='search'))
+        return h.redirect_to(h.url_for(controller='package', action='search'))
