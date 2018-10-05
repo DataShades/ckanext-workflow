@@ -77,7 +77,7 @@ def get_workflow_from_package(pkg):
     except KeyError:
         log.error(
             'Unable to find workflow `{0}`. Using `base` instead'.
-            format(stage)
+            format(wf_name)
         )
         return Workflow.get_workflow('base'), 'base'
 
