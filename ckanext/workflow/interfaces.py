@@ -21,3 +21,8 @@ class IWorkflow(Interface):
         """
 
         return dict()
+
+    def update_workflow_stage_data(self, field, value, package, data_dict):
+        u"""Update data_dict before patch action.
+        """
+        pass
