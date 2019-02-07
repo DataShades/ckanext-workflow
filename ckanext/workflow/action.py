@@ -4,6 +4,7 @@ from ckan.plugins.interfaces import IDomainObjectModification
 import ckan.plugins.toolkit as tk
 import ckan.model as model
 import ckanext.workflow.helpers as workflow_helpers
+from ckanext.workflow.interfaces import IWorkflow
 
 
 log = logging.getLogger(__name__)
@@ -54,8 +55,8 @@ def _prepare_workflow_action(context, data_dict, auth_name):
     return pkg_dict, stage, wf
 
 
-def _update_workflow_stage(field, value, pkg):
-    """Update workflow stage directly in db, avoiding new revision.
+def _update_workflow_stage(context, field, value, pkg):
+    """Update workflow stage.
 
     :param field: workflow stage's field name
     :param value: next workflow stage
@@ -65,16 +66,16 @@ def _update_workflow_stage(field, value, pkg):
     :rtype: None
 
     """
-    model.Session.query(model.PackageExtra).filter_by(
-        package_id=pkg.id,
-        key=field
-    ).update({
-        'value': value
-    })
-    model.Session.commit()
 
-    for plugin in plugins.PluginImplementations(IDomainObjectModification):
-        plugin.notify(pkg, 'changed')
+    data_dict = {
+        'id': pkg.id,
+        field: value
+    }
+
+    for plugin in plugins.PluginImplementations(IWorkflow):
+        plugin.update_workflow_stage_data(field, value, pkg, data_dict)
+
+    tk.get_action('package_patch')(context, data_dict)
 
 
 def create_dataset_revision(context, data_dict):
@@ -138,7 +139,7 @@ def move_to_next_stage(context, data_dict):
     next_stage = stage.approve()
     field_name = workflow_helpers._workflow_stage_field()
 
-    _update_workflow_stage(field_name, str(next_stage), context['package'])
+    _update_workflow_stage(context ,field_name, str(next_stage), context['package'])
 
     if callable(stage.approval_effect):
         stage.approval_effect(context, pkg_dict)
@@ -159,7 +160,7 @@ def move_to_previous_stage(context, data_dict):
         context, data_dict, 'move_to_previous_stage')
     next_stage = stage.reject()
     field_name = workflow_helpers._workflow_stage_field()
-    _update_workflow_stage(field_name, str(next_stage), context['package'])
+    _update_workflow_stage(context ,field_name, str(next_stage), context['package'])
 
     if callable(stage.rejection_effect):
         stage.rejection_effect(context, pkg_dict, data_dict)
@@ -180,6 +181,6 @@ def workflow_rescind_dataset(context, data_dict):
         context, data_dict, 'workflow_rescind_dataset')
     next_stage = wf.start
     field_name = workflow_helpers._workflow_stage_field()
-    _update_workflow_stage(field_name, str(next_stage), context['package'])
+    _update_workflow_stage(context ,field_name, str(next_stage), context['package'])
 
     return {field_name: str(next_stage)}
