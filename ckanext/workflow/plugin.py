@@ -169,6 +169,9 @@ class WorkflowPlugin(plugins.SingletonPlugin):
             base=BaseWorkflow()
         )
 
+    def update_workflow_stage_data(self, field, value, package, data_dict):
+        pass
+
     # IValidators
 
     def get_validators(self):
