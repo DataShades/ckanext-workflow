@@ -15,7 +15,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # http://packaging.python.org/en/latest/tutorial.html#version
-    version='1.0.0',
+    version='1.1.0',
 
     description='''Extended workflow for dataset lifecycle''',
     long_description=long_description,
@@ -59,7 +59,11 @@ setup(
     # project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/technical.html#install-requires-vs-requirements-files
-    install_requires=[],
+    install_requires=[
+        "ckantoolkit",
+        "six",
+        "alembic",
+    ],
 
     # If there are data files included in your packages that need to be
     # installed, specify them here.  If using Python 2.6 or less, then these
@@ -80,8 +84,10 @@ setup(
     entry_points='''
         [ckan.plugins]
         workflow=ckanext.workflow.plugin:WorkflowPlugin
+
 	[babel.extractors]
 	ckan = ckan.lib.extract:extract_ckan
+
         [paste.paster_command]
         workflow=ckanext.workflow.command:WorkflowCommand
 
