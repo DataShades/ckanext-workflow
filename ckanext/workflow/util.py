@@ -23,8 +23,12 @@ class WorkflowStage:
         reduce(linearizer, stages)
 
     def __init__(self,
-                 stage_name, approval_msg=None, reject_msg=None, label=None,
-                 approval_effect=None, rejection_effect=None):
+                 stage_name,
+                 approval_msg=None,
+                 reject_msg=None,
+                 label=None,
+                 approval_effect=None,
+                 rejection_effect=None):
         self._next = []
         self._previous = []
         self._approver_roles = [roles.site_admin]
@@ -104,10 +108,15 @@ class Workflow:
             cls._registry.update(plugin.register_workflows())
 
     @classmethod
+    def get_all_stages(cls):
+        stages = []
+        for wf in cls._registry.values():
+            stages.extend(wf.stages.keys())
+        return stages
+
+    @classmethod
     def get_all_finish_stages(cls):
-        return [
-            str(wf.finish) for wf in cls._registry.values()
-        ]
+        return [str(wf.finish) for wf in cls._registry.values()]
 
     def __init__(self):
         self.start = self.finish = None

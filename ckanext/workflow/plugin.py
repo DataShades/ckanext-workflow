@@ -8,6 +8,7 @@ import ckan.model as model
 from ckan.common import c
 import ckan.lib.helpers as helpers
 import ckan.lib.mailer as mailer
+from ckan.lib.plugins import DefaultPermissionLabels
 
 from ckanext.workflow.util import Workflow, BaseWorkflow
 from ckanext.workflow.interfaces import IWorkflow
@@ -27,22 +28,18 @@ def submit_for_approval(context, pkg):
         dataset_type = 'revision for SEED dataset'
     if site_admin_emails:
         try:
-            message = (
-                'A new {type} {title} ({dataset_url}) has'
-                ' been submitted for publication approval by {creator}.'
-            ).format(
-                type=dataset_type,
-                title=pkg['title'],
-                dataset_url=helpers.url_for(
-                    'dataset_read', id=pkg['id'], qualified=True),
-                creator=context['user']
-            )
+            message = ('A new {type} {title} ({dataset_url}) has'
+                       ' been submitted for publication approval by {creator}.'
+                       ).format(type=dataset_type,
+                                title=pkg['title'],
+                                dataset_url=helpers.url_for('dataset_read',
+                                                            id=pkg['id'],
+                                                            qualified=True),
+                                creator=context['user'])
             for email in site_admin_emails:
 
-                mailer.mail_recipient(
-                    'Admin', email, 'Submission for approval',
-                    message
-                )
+                mailer.mail_recipient('Admin', email,
+                                      'Submission for approval', message)
         except Exception as e:
             log.error('[workflow email] {0}'.format(e))
 
@@ -55,8 +52,9 @@ def _approval_preparation(context, pkg, message, data={}):
     if workflow_helpers.get_original_dataset_id_from_package(pkg):
         type = 'revision for SEED dataset'
     if 'dataset_url' not in data:
-        dataset_url = helpers.url_for(
-            'dataset_read', id=pkg['id'], qualified=True)
+        dataset_url = helpers.url_for('dataset_read',
+                                      id=pkg['id'],
+                                      qualified=True)
     else:
         dataset_url = data['dataset_url']
 
@@ -65,20 +63,15 @@ def _approval_preparation(context, pkg, message, data={}):
             raise Exception('User <{0}> not found'.format(
                 pkg['creator_user_id']))
         if not author.email:
-            raise Exception('User <{0}> has no email'.format(
-                author.name))
+            raise Exception('User <{0}> has no email'.format(author.name))
 
         mailer.mail_recipient(
-            author.fullname or author.name,
-            author.email, subject,
-            message.format(
-                type=type,
-                title=pkg['title'],
-                dataset_url=dataset_url,
-                admin=context['user'],
-                reason=reason
-             )
-        )
+            author.fullname or author.name, author.email, subject,
+            message.format(type=type,
+                           title=pkg['title'],
+                           dataset_url=dataset_url,
+                           admin=context['user'],
+                           reason=reason))
     except Exception as e:
         log.error('[workflow email] {0}'.format(e))
 
@@ -98,8 +91,9 @@ def approve_approval(context, pkg, data={}):
     data['subject'] = 'SEED dataset approval'
     original_id = workflow_helpers.get_original_dataset_id_from_package(pkg)
     if original_id:
-        data['dataset_url'] = helpers.url_for(
-            'dataset_read', id=original_id, qualified=True)
+        data['dataset_url'] = helpers.url_for('dataset_read',
+                                              id=original_id,
+                                              qualified=True)
 
     return _approval_preparation(context, pkg, message, data)
 
@@ -117,20 +111,16 @@ def unpublish_dataset(context, pkg, data={}):
             raise Exception('User <{0}> not found'.format(
                 pkg['creator_user_id']))
         if not author.email:
-            raise Exception('User <{0}> has no email'.format(
-                author.name))
+            raise Exception('User <{0}> has no email'.format(author.name))
 
         mailer.mail_recipient(
-            author.fullname or author.name,
-            author.email, subject,
-            message.format(
-                title=pkg['title'],
-                dataset_url=helpers.url_for(
-                    'dataset_read', id=pkg['id'], qualified=True),
-                admin=context['user'],
-                reason=reason
-             )
-        )
+            author.fullname or author.name, author.email, subject,
+            message.format(title=pkg['title'],
+                           dataset_url=helpers.url_for('dataset_read',
+                                                       id=pkg['id'],
+                                                       qualified=True),
+                           admin=context['user'],
+                           reason=reason))
     except Exception as e:
         log.error('[workflow email] {0}'.format(e))
 
@@ -144,6 +134,7 @@ class WorkflowPlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IActions)
     plugins.implements(plugins.ITemplateHelpers)
     plugins.implements(plugins.IRoutes, inherit=True)
+    plugins.implements(plugins.IPermissionLabels)
 
     # IConfigurer
 
@@ -165,9 +156,7 @@ class WorkflowPlugin(plugins.SingletonPlugin):
     # IWorkflow
 
     def register_workflows(self):
-        return dict(
-            base=BaseWorkflow()
-        )
+        return dict(base=BaseWorkflow())
 
     # IValidators
 
@@ -194,55 +183,69 @@ class WorkflowPlugin(plugins.SingletonPlugin):
     def before_map(self, map):
 
         ctrl = 'ckanext.workflow.controller:WorkflowController'
-        map.connect(
-            'workflow_approve',
-            '/workflow/dataset/{id}/approve',
-            controller=ctrl, action='approve')
-        map.connect(
-            'workflow_reject',
-            '/workflow/dataset/{id}/reject',
-            controller=ctrl, action='reject')
-        map.connect(
-            'workflow_rescind',
-            '/workflow/dataset/{id}/rescind',
-            controller=ctrl, action='rescind')
-        map.connect(
-            'workflow_pending_list',
-            '/workflow/approvals',
-            controller=ctrl, action='pending_list')
-        map.connect(
-            'merge_dataset_revision',
-            '/workflow/dataset/{id}/merge_revision',
-            controller=ctrl, action='merge_revision')
-        map.connect(
-            'create_dataset_revision',
-            '/workflow/dataset/{id}/create_revision',
-            controller=ctrl, action='create_revision')
-        map.connect(
-            'purge_unpublished_dataset',
-            '/workflow/dataset/{id}/purge',
-            controller=ctrl, action='purge')
+        map.connect('workflow_approve',
+                    '/workflow/dataset/{id}/approve',
+                    controller=ctrl,
+                    action='approve')
+        map.connect('workflow_reject',
+                    '/workflow/dataset/{id}/reject',
+                    controller=ctrl,
+                    action='reject')
+        map.connect('workflow_rescind',
+                    '/workflow/dataset/{id}/rescind',
+                    controller=ctrl,
+                    action='rescind')
+        map.connect('workflow_pending_list',
+                    '/workflow/approvals',
+                    controller=ctrl,
+                    action='pending_list')
+        map.connect('merge_dataset_revision',
+                    '/workflow/dataset/{id}/merge_revision',
+                    controller=ctrl,
+                    action='merge_revision')
+        map.connect('create_dataset_revision',
+                    '/workflow/dataset/{id}/create_revision',
+                    controller=ctrl,
+                    action='create_revision')
+        map.connect('purge_unpublished_dataset',
+                    '/workflow/dataset/{id}/purge',
+                    controller=ctrl,
+                    action='purge')
 
         return map
+
+    # IPermissionLabels
+
+    def get_dataset_labels(self, dataset_obj):
+        field = workflow_helpers._workflow_stage_field()
+        stage = getattr(dataset_obj, field,
+                        None) or dataset_obj.extras.get(field)
+
+        if not stage or stage in Workflow.get_all_finish_stages():
+            return DefaultPermissionLabels().get_dataset_labels(dataset_obj)
+
+        return [
+            u'stage_{}_{}'.format(
+                stage, dataset_obj.owner_org or dataset_obj.creator_user_id)
+        ]
+
+    def get_user_dataset_labels(self, user_obj):
+        labels = DefaultPermissionLabels().get_user_dataset_labels(user_obj)
+        if user_obj:
+            orgs = toolkit.get_action(u'organization_list_for_user')(
+                {
+                    u'user': user_obj.id
+                }, {
+                    u'permission': u'admin'
+                })
+
+            labels.extend(u'stage_{}_{}'.format(s, o[u'id']) for o in orgs
+                          for s in Workflow.get_all_stages())
+        return labels
 
     # IPackageController
 
     def before_search(self, search_params):
-        fq = search_params.get('fq', '')
-        q = search_params.get('q', '')
-        is_member = False
-        match = org_re.search(fq) or org_re.search(q)
-        if match is not None:
-            id = match.group('id').strip('\'"')
-            is_member = helpers.user_in_org_or_group(id)
-
-        if c.userobj and '+creator_user_id:{0}'.format(
-                c.userobj.id) in fq or is_member:
-            pass
-        else:
-            fq += ' +{0}:({1})'.format(
-                workflow_helpers._workflow_stage_field(),
-                ' OR '.join(Workflow.get_all_finish_stages())
-            )
-        search_params['fq'] = fq
+        # workflow_helpers._workflow_stage_field(), ' OR '.join(Workflow.get_all_finish_stages())
+        search_params['include_drafts'] = True
         return search_params
