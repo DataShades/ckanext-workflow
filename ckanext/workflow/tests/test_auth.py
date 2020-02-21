@@ -1,3 +1,5 @@
+from builtins import str
+from builtins import object
 import nose.tools as nt
 import ckan.tests.helpers as th
 import ckan.tests.factories as factories
@@ -13,7 +15,7 @@ def _context(user, **kwargs):
     )
 
 
-class TestAuth:
+class TestAuth(object):
     def setup(self):
         th.reset_db()
 

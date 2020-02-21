@@ -1,3 +1,4 @@
+from builtins import str
 import ckan.plugins as plugins
 from ckan.plugins.interfaces import IDomainObjectModification
 

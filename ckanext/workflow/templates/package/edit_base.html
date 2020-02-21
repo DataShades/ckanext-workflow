@@ -1,32 +1,34 @@
 {% ckan_extends %}
 
 {% block content_action %}
+{% if pkg is defined %}
   {% set wf_stage = h.get_stage_from_package(pkg) %}
   {% if wf_stage  %}
     {% if  wf_stage.reject() is none and h.check_access('purge_unpublished_dataset', pkg) %}
-      <a class="btn"  href="{{ h.url_for('purge_unpublished_dataset', id=pkg.name) }}">{{ _('Purge') }}</a>
+      <a class="btn" href="{{ h.url_for('workflow.purge_unpublished_dataset', id=pkg.name) }}">{{ _('Purge') }}</a>
     {% endif %}
 
     {% if  wf_stage.reject() is not none and h.check_access('workflow_rescind_dataset', pkg) %}
-      <a class="btn"  href="{{ h.url_for('workflow_rescind', id=pkg.name) }}">{{ _('Rescind') }}</a>
+      <a class="btn" href="{{ h.url_for('workflow.workflow_rescind', id=pkg.name) }}">{{ _('Rescind') }}</a>
     {% endif %}
 
 
     {% if h.check_access('move_to_next_stage', pkg) and wf_stage.approve() %}
-      <a class="btn"  href="{{ h.url_for('workflow_approve', id=pkg.name) }}">{{ _(wf_stage.approval_msg) }}</a>
+      <a class="btn" href="{{ h.url_for('workflow.workflow_approve', id=pkg.name) }}">{{ _(wf_stage.approval_msg) }}</a>
     {% endif %}
     {% if h.check_access('move_to_next_stage', pkg) and wf_stage.reject()  %}
       {% if wf_stage.rejection_effect %}
         <a class="btn" data-toggle="modal" href="#rejection-modal">{{ _(wf_stage.reject_msg) }}</a>
       {% else %}
-        <a class="btn"  href="{{ h.url_for('workflow_reject', id=pkg.name) }}">{{  _(wf_stage.reject_msg) }}</a>
+        <a class="btn" href="{{ h.url_for('workflow.workflow_reject', id=pkg.name) }}">{{  _(wf_stage.reject_msg) }}</a>
       {% endif %}
     {% endif %}
   {% endif %}
+{% endif %}
+
+
   {{ super() }}
 {% endblock %}
-
-
 
 
 {% block primary %}
@@ -40,7 +42,10 @@
 	  <h4 class="modal-title">Confirmation</h4>
 	</div>
 	<div class="modal-body">
-          <form action="{{ h.url_for('workflow_reject', id=pkg.name) }}" method="post" id="reason-of-rejection">
+    {% if pkg is defined %}
+      <form action="{{ h.url_for('workflow.workflow_reject', id=pkg.name) }}" method="POST" id="reason-of-rejection">
+    {% endif %}
+
 
             <div class="form-group">
 	      <label for="reason-text" class="col-sm-2 control-label">Provide a reason of this action</label>

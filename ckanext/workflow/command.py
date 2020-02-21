@@ -1,3 +1,4 @@
+from __future__ import print_function
 from ckan.lib.cli import CkanCommand
 import paste.script
 import logging
@@ -69,7 +70,7 @@ class WorkflowCommand(CkanCommand):
         action = self.args[0]
 
         if not len(self.args):
-            print self.usage
+            print(self.usage)
         elif action == 'migrate':
             try:
                 id = self.args[1]

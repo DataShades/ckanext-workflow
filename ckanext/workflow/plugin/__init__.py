@@ -3,7 +3,7 @@ import re
 import logging
 
 import ckan.plugins as plugins
-import ckan.plugins.toolkit as toolkit
+import ckan.plugins.toolkit as tk
 import ckan.model as model
 from ckan.common import c
 import ckan.lib.helpers as helpers
@@ -12,6 +12,7 @@ from ckan.lib.plugins import DefaultPermissionLabels
 
 from ckanext.workflow.util import Workflow, BaseWorkflow
 from ckanext.workflow.interfaces import IWorkflow
+
 import ckanext.workflow.helpers as workflow_helpers
 import ckanext.workflow.validators as validators
 import ckanext.workflow.auth as auth
@@ -19,6 +20,11 @@ import ckanext.workflow.action as action
 
 org_re = re.compile('owner_org:(?P<id>[^\s]+)')
 log = logging.getLogger(__name__)
+
+if tk.check_ckan_version("2.9"):
+    from ckanext.workflow.plugin.flask_plugin import MixinPlugin
+else:
+    from ckanext.workflow.plugin.pylons_plugin import MixinPlugin
 
 
 def submit_for_approval(context, pkg):
@@ -125,7 +131,7 @@ def unpublish_dataset(context, pkg, data={}):
         log.error('[workflow email] {0}'.format(e))
 
 
-class WorkflowPlugin(plugins.SingletonPlugin):
+class WorkflowPlugin(MixinPlugin, plugins.SingletonPlugin):
     plugins.implements(plugins.IConfigurer)
     plugins.implements(IWorkflow)
     plugins.implements(plugins.IValidators)
@@ -139,9 +145,9 @@ class WorkflowPlugin(plugins.SingletonPlugin):
     # IConfigurer
 
     def update_config(self, config_):
-        toolkit.add_template_directory(config_, 'templates')
-        toolkit.add_public_directory(config_, 'public')
-        toolkit.add_resource('fanstatic', 'workflow')
+        tk.add_template_directory(config_, '../templates')
+        tk.add_public_directory(config_, '../public')
+        tk.add_resource('../fanstatic', 'workflow')
         Workflow.configure()
 
         Workflow.get_workflow(
@@ -178,41 +184,6 @@ class WorkflowPlugin(plugins.SingletonPlugin):
     def get_helpers(self):
         return workflow_helpers.get_helpers()
 
-    # IRoutes
-
-    def before_map(self, map):
-
-        ctrl = 'ckanext.workflow.controller:WorkflowController'
-        map.connect('workflow_approve',
-                    '/workflow/dataset/{id}/approve',
-                    controller=ctrl,
-                    action='approve')
-        map.connect('workflow_reject',
-                    '/workflow/dataset/{id}/reject',
-                    controller=ctrl,
-                    action='reject')
-        map.connect('workflow_rescind',
-                    '/workflow/dataset/{id}/rescind',
-                    controller=ctrl,
-                    action='rescind')
-        map.connect('workflow_pending_list',
-                    '/workflow/approvals',
-                    controller=ctrl,
-                    action='pending_list')
-        map.connect('merge_dataset_revision',
-                    '/workflow/dataset/{id}/merge_revision',
-                    controller=ctrl,
-                    action='merge_revision')
-        map.connect('create_dataset_revision',
-                    '/workflow/dataset/{id}/create_revision',
-                    controller=ctrl,
-                    action='create_revision')
-        map.connect('purge_unpublished_dataset',
-                    '/workflow/dataset/{id}/purge',
-                    controller=ctrl,
-                    action='purge')
-
-        return map
 
     # IPermissionLabels
 
@@ -232,7 +203,7 @@ class WorkflowPlugin(plugins.SingletonPlugin):
     def get_user_dataset_labels(self, user_obj):
         labels = DefaultPermissionLabels().get_user_dataset_labels(user_obj)
         if user_obj:
-            orgs = toolkit.get_action(u'organization_list_for_user')(
+            orgs = tk.get_action(u'organization_list_for_user')(
                 {
                     u'user': user_obj.id
                 }, {
@@ -249,3 +220,4 @@ class WorkflowPlugin(plugins.SingletonPlugin):
         # workflow_helpers._workflow_stage_field(), ' OR '.join(Workflow.get_all_finish_stages())
         search_params['include_drafts'] = True
         return search_params
+

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from builtins import str
 from ckan.logic.validators import Invalid, missing
 from ckanext.workflow.util import Workflow
 import ckanext.workflow.helpers as h

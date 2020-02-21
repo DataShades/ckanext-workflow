@@ -3,7 +3,7 @@
 {% block subtitle %}{{ _('About') }}{% endblock %}
 
 {% block breadcrumb_content %}
-  <li class="active">{% link_for _('Approvals'), controller='ckanext.workflow.controller:WorkflowController', action='pending_list' %}</li>
+  <li class="active">{% link_for _('Approvals'), named_route='workflow.workflow_pending_list' %}</li>
 {% endblock %}
 
 {% block primary %}
@@ -14,7 +14,7 @@
 
       {% for package in datasets %}
         <li>
-          {% link_for package.title, controller='package', action='read', id=package.name %}
+          {% link_for package.title, controller='dataset' if h.ckan_version() > '2.9' else 'package', action='read', id=package.name %}
           {% if h.is_revision(package) %}
             <span class="label label-warning">revision</span>
           {% endif %}

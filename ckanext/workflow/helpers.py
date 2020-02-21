@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
 
-import pylons.config as config
+from ckantoolkit import config
+
 import ckan.model as model
+
 from ckanext.workflow.util import Workflow
 
 log = logging.getLogger(__name__)

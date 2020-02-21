@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+from builtins import str
+from builtins import object
 import logging
 from collections import namedtuple
+from functools import reduce
 import ckan.plugins as plugins
 
 from ckanext.workflow.interfaces import IWorkflow
@@ -10,7 +13,7 @@ Roles = namedtuple('Roles', 'creator,site_admin,editor')
 roles = Roles('creator', 'site_admin', 'editor')
 
 
-class WorkflowStage:
+class WorkflowStage(object):
     """Representation of workflow step.
     """
     @classmethod
@@ -91,7 +94,7 @@ class WorkflowStage:
         self._rejecter_roles = value
 
 
-class Workflow:
+class Workflow(object):
 
     _registry = {}
     start = None
@@ -110,13 +113,13 @@ class Workflow:
     @classmethod
     def get_all_stages(cls):
         stages = []
-        for wf in cls._registry.values():
-            stages.extend(wf.stages.keys())
+        for wf in list(cls._registry.values()):
+            stages.extend(list(wf.stages.keys()))
         return stages
 
     @classmethod
     def get_all_finish_stages(cls):
-        return [str(wf.finish) for wf in cls._registry.values()]
+        return [str(wf.finish) for wf in list(cls._registry.values())]
 
     def __init__(self):
         self.start = self.finish = None

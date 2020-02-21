@@ -1,3 +1,4 @@
+from builtins import object
 import mock
 import ckan.tests.factories as factories
 import ckan.tests.helpers as th
@@ -5,7 +6,7 @@ import nose.tools as nt
 import ckan.plugins.toolkit as tk
 
 
-class TestWorkflow:
+class TestWorkflow(object):
 
     def setup(self):
         th.reset_db()

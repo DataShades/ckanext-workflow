@@ -1,1 +1,1 @@
-{% link_for _('Origin'), controller='package', action='read', id=data[field.field_name] %}
+{% link_for _('Origin'), controller='dataset' if h.ckan_version() > '2.9' else 'package', action='read', id=data[field.field_name] %}

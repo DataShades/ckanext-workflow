@@ -1,3 +1,4 @@
+from builtins import str
 import ckan.tests.factories as factories
 import ckan.tests.helpers as th
 import nose.tools as nt

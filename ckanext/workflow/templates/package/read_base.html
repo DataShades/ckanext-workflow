@@ -4,9 +4,9 @@
 {% block content_action %}
   {% set revision = h.get_dataset_revision(pkg.id)  %}
   {% if h.check_access('create_dataset_revision', pkg) %}
-    <a class="btn"  href="{{ h.url_for('create_dataset_revision', id=pkg.name) }}">{{ _('Create revision') }}</a>
+    <a class="btn"  href="{{ h.url_for('workflow.create_dataset_revision', id=pkg.name) }}">{{ _('Create revision') }}</a>
   {% elif revision and h.check_access('read_dataset_revision', revision.as_dict()) %}
-    <a class="btn"  href="{{ h.url_for(controller='package', action='read', id=revision.name) }}">{{ _('View revision') }}</a>
+    <a class="btn"  href="{{ h.url_for(controller='dataset' if h.ckan_version() > '2.9' else 'package', action='read', id=revision.name) }}">{{ _('View revision') }}</a>
   {% endif %}
 
   {{ super() }}

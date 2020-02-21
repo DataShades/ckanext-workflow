@@ -1,8 +1,10 @@
+from builtins import str
+from builtins import object
 import nose.tools as nt
 import ckanext.workflow.util as util
 
 
-class TestBaseWorkflow:
+class TestBaseWorkflow(object):
     def setup(self):
         self.wf = util.BaseWorkflow()
 

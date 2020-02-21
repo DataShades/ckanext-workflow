@@ -1,3 +1,4 @@
+from builtins import str
 import ckan.plugins.toolkit as tk
 import ckan.lib.base as base
 import ckan.lib.helpers as h
@@ -24,7 +25,7 @@ class WorkflowController(base.BaseController):
 
         next = str(wh.get_stage_from_package(pkg).approve())
         if next == str(wf.finish) and wh.is_revision(pkg):
-            endpoint = h.url_for('merge_dataset_revision', id=id)
+            endpoint = h.url_for('workflow.merge_dataset_revision', id=id)
         tk.get_action('move_to_next_stage')(context, {'id': id})
 
         return tk.redirect_to(endpoint)
@@ -34,7 +35,7 @@ class WorkflowController(base.BaseController):
             'user': c.user,
             'model': model
         }
-        reason = request.POST.get('reason')
+        reason = request.form.get('reason')
         tk.get_action('move_to_previous_stage')(context, {
             'id': id,
             'reason': reason
