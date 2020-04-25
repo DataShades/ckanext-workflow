@@ -62,7 +62,6 @@ setup(
     install_requires=[
         "ckantoolkit",
         "six",
-        "alembic",
     ],
 
     # If there are data files included in your packages that need to be
@@ -84,6 +83,8 @@ setup(
     entry_points='''
         [ckan.plugins]
         workflow=ckanext.workflow.plugin:WorkflowPlugin
+        test_workflow=ckanext.workflow.tests.plugin:TestWorkflowPlugin
+        test_workflow_override=ckanext.workflow.tests.plugin:TestWorkflowOverridePlugin
 
 	[babel.extractors]
 	ckan = ckan.lib.extract:extract_ckan

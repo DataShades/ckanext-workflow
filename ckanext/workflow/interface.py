@@ -8,12 +8,12 @@ import ckan.plugins.interfaces as interfaces
 class State(object):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, context):
-        self._context = context
+    def __init__(self, ctx):
+        self._ctx = ctx
 
     @property
-    def context(self):
-        return self._context
+    def ctx(self):
+        return self._ctx
 
     @abc.abstractproperty
     def name(self):
@@ -30,14 +30,14 @@ class State(object):
     def get_dataset_labels(self):
         pass
 
-    def fix_context(self):
+    def fix_ctx(self):
         pass
 
-    def save_context(self):
+    def save(self, context):
         """Persist all changes to current context.
         """
         tk.get_action('package_patch')(
-            None, self.context)
+            context, self.ctx)
 
     def with_weight(self, weight):
         """

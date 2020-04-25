@@ -44,7 +44,7 @@ class WorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
         labels = state.get_dataset_labels()
         if labels:
             return labels
-        return super(WorkflowPlugin, self).get_dataset_labels()
+        return super(WorkflowPlugin, self).get_dataset_labels(dataset_obj)
 
     # IWorkflow
 

@@ -9,10 +9,11 @@ class PrivateState(State):
     name = 'private'
 
     def prev(self, **kwargs):
-        pass
+        return self
 
     def next(self, **kwargs):
         self.ctx['private'] = False
+        return PublicState(self.ctx)
 
 
 class PublicState(State):
@@ -21,6 +22,7 @@ class PublicState(State):
 
     def prev(self, **kwargs):
         self.ctx['private'] = True
+        return PrivateState(self.ctx)
 
     def next(self, **kwargs):
-        pass
+        return self
