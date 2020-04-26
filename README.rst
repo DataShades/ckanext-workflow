@@ -1,11 +1,19 @@
+
+.. image:: https://travis-ci.org/DataShades/ckanext-workflow.svg?branch=master
+    :target: https://travis-ci.org/DataShades/ckanext-workflow
+
+.. image:: https://codecov.io/gh/DataShades/ckanext-workflow/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/DataShades/ckanext-workflow
+
+================
 ckanext-workflow
 ================
 
-[![Travis](https://travis-ci.org/DataShades/ckanext-workflow.svg?branch=master)](https://travis-ci.org/DataShades/ckanext-workflow)
-[![Coverage](https://coveralls.io/repos/DataShades/ckanext-workflow/badge.svg?branch=master&service=github)](https://coveralls.io/github/DataShades/ckanext-workflow?branch=master)
+.. Put a description of your extension here:
+   What does it do? What features does it have?
+   Consider including some screenshots or embedding a video!
 
 
-------------
 Installation
 ------------
 
@@ -27,7 +35,7 @@ To install ckanext-workflow:
 
      sudo service apache2 reload
 
-------------------------
+
 Development Installation
 ------------------------
 
