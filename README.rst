@@ -1,12 +1,8 @@
-.. image:: https://travis-ci.org/smotornyuk/ckanext-workflow.svg?branch=master
-    :target: https://travis-ci.org/smotornyuk/ckanext-workflow
-
-.. image:: https://coveralls.io/repos/smotornyuk/ckanext-workflow/badge.svg
-  :target: https://coveralls.io/r/smotornyuk/ckanext-workflow
-
-================
 ckanext-workflow
 ================
+
+[![Travis](https://travis-ci.org/DataShades/ckanext-workflow.svg?branch=master)](https://travis-ci.org/DataShades/ckanext-workflow)
+[![Coverage](https://coveralls.io/repos/DataShades/ckanext-workflow/badge.svg?branch=master&service=github)](https://coveralls.io/github/DataShades/ckanext-workflow?branch=master)
 
 .. Put a description of your extension here:
    What does it do? What features does it have?
