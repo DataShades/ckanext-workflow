@@ -17,9 +17,14 @@ class TestWorkflowPlugin(p.SingletonPlugin):
             State = states.PublishedState
         return State(pkg_dict).with_weight(utils.StateWeight.handler)
 
+    def get_user_permission_labels(self, user_obj, labels):
+        if user_obj:
+            labels.extend(['draft', 'review', 'published'])
+        return labels
+
 
 class TestWorkflowOverridePlugin(p.SingletonPlugin):
-    p.implements(interface.IWorkflow)
+    p.implements(interface.IWorkflow, inherit=True)
 
     def get_state_for_package(self, pkg_dict):
         if pkg_dict['state'] == 'draft':

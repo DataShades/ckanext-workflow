@@ -13,22 +13,30 @@ class State(object):
 
     @property
     def ctx(self):
+        """Related package dict.
+        """
         return self._ctx
 
     @abc.abstractproperty
     def name(self):
+        """Machine readable name of state.
+        """
         pass
 
     @abc.abstractmethod
     def next(self, **kwargs):
-        pass
+        """Transform ctx and return following state for updated ctx.
+        """
+        return self
 
     @abc.abstractmethod
     def prev(self, **kwargs):
-        pass
+        """Transform ctx and return previous state for updated ctx.
+        """
+        return self
 
-    def get_dataset_labels(self):
-        pass
+    def get_dataset_permission_labels(self, labels):
+        return labels
 
     def fix_ctx(self):
         pass
@@ -40,16 +48,12 @@ class State(object):
             context, self.ctx)
 
     def with_weight(self, weight):
-        """
-        >>> class CustomState(State): name = next = prev = 'custom'
-        >>> CustomState({}).with_weight(10)[0]
-        10
-        >>> CustomState({}).with_weight(10)[1].name
-        'custom'
-        """
         return (weight, self)
 
 
 class IWorkflow(interfaces.Interface):
     def get_state_for_package(self, pkg_dict):
         pass
+
+    def get_user_permission_labels(self, user_obj, labels):
+        return labels

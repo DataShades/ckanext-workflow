@@ -20,7 +20,7 @@ class WorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
     p.implements(p.IAuthFunctions)
     p.implements(p.IActions)
     p.implements(p.IPermissionLabels, inherit=True)
-    p.implements(interface.IWorkflow)
+    p.implements(interface.IWorkflow, inherit=True)
 
     # ITemplateHelpers
 
@@ -41,10 +41,15 @@ class WorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
 
     def get_dataset_labels(self, dataset_obj):
         state = tk.h.workflow_get_state(dataset_obj.as_dict())
-        labels = state.get_dataset_labels()
-        if labels:
-            return labels
-        return super(WorkflowPlugin, self).get_dataset_labels(dataset_obj)
+        labels = super(WorkflowPlugin, self).get_dataset_labels(dataset_obj)
+        labels = state.get_dataset_permission_labels(labels)
+        return labels
+
+    def get_user_dataset_labels(self, user_obj):
+        labels = super(WorkflowPlugin, self).get_user_dataset_labels(user_obj)
+        for plugin in p.PluginImplementations(interface.IWorkflow):
+            labels = plugin.get_user_permission_labels(user_obj, labels)
+        return labels
 
     # IWorkflow
 

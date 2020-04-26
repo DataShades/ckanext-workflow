@@ -1,3 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash
+set -e
 
-nosetests --nologcapture --with-pylons=subdir/test.ini --with-coverage --cover-package=ckanext.workflow --cover-inclusive --cover-erase --cover-tests
+pytest --ckan-ini=subdir/test.ini --cov=ckanext.workflow ckanext/workflow/tests
