@@ -4,9 +4,6 @@ ckanext-workflow
 [![Travis](https://travis-ci.org/DataShades/ckanext-workflow.svg?branch=master)](https://travis-ci.org/DataShades/ckanext-workflow)
 [![Coverage](https://coveralls.io/repos/DataShades/ckanext-workflow/badge.svg?branch=master&service=github)](https://coveralls.io/github/DataShades/ckanext-workflow?branch=master)
 
-.. Put a description of your extension here:
-   What does it do? What features does it have?
-   Consider including some screenshots or embedding a video!
 
 ------------
 Installation
