@@ -15,13 +15,13 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # http://packaging.python.org/en/latest/tutorial.html#version
-    version='1.1.0',
+    version='2.0.0a1',
 
     description='''Extended workflow for dataset lifecycle''',
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/smotornyuk/ckanext-workflow',
+    url='https://github.com/DataShades/ckanext-workflow',
 
     # Author details
     author='''Sergey Motornyuk''',
@@ -43,13 +43,16 @@ setup(
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+
     ],
 
 
     # What does your project relate to?
-    keywords='''CKAN workflow''',
+    keywords='''CKAN ckanext workflow''',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
