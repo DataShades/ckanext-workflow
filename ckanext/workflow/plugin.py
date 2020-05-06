@@ -56,4 +56,4 @@ class WorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
     def get_state_for_package(self, pkg_dict):
         private = pkg_dict.get('private', True)
         State = states.PrivateState if private else states.PublicState
-        return State(pkg_dict).with_weight(utils.StateWeight.fallback)
+        return State(pkg_dict).with_weight(utils.Weight.fallback)

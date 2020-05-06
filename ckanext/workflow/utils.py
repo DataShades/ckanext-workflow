@@ -3,8 +3,10 @@
 import enum
 
 
-class StateWeight(enum.IntEnum):
-    fallback = 0
-    default = 10
+class Weight(enum.IntEnum):
+    skip = 0
+    fallback = 10
+    default = 20
     handler = 30
+    special = 40
     override = 50

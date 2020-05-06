@@ -2,8 +2,10 @@
 
 import click
 
+
 def get_commands():
     return [workflow]
+
 
 @click.group()
 def workflow():

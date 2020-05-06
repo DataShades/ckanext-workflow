@@ -15,6 +15,9 @@ class PrivateState(State):
         self.ctx['private'] = False
         return PublicState(self.ctx)
 
+    def fix_ctx(self):
+        self.ctx['private'] = True
+
 
 class PublicState(State):
 
@@ -26,3 +29,6 @@ class PublicState(State):
 
     def next(self, **kwargs):
         return self
+
+    def fix_ctx(self):
+        self.ctx['private'] = False

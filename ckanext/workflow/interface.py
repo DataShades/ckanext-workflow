@@ -53,7 +53,7 @@ class State(object):
 
 class IWorkflow(interfaces.Interface):
     def get_state_for_package(self, pkg_dict):
-        pass
+        return (0, None)
 
     def get_user_permission_labels(self, user_obj, labels):
         return labels
