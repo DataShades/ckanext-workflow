@@ -15,7 +15,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # http://packaging.python.org/en/latest/tutorial.html#version
-    version='2.0.0',
+    version='2.1.0a0',
 
     description='''Extended workflow for dataset lifecycle''',
     long_description=long_description,
@@ -66,6 +66,9 @@ setup(
         "ckantoolkit",
         "six",
     ],
+    extras_require={
+        ':python_version < "3.4"': ['enum34']
+    },
 
     # If there are data files included in your packages that need to be
     # installed, specify them here.  If using Python 2.6 or less, then these
@@ -74,10 +77,11 @@ setup(
     package_data={
     },
 
-    # Although 'package_data' is the preferred approach, in some case you may
-    # need to place data files outside of your packages.
-    # see http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files
-    # In this case, 'data_file' will be installed into '<sys.prefix>/my_data'
+    # Although 'package_data' is the preferred approach, in some case
+    # you may need to place data files outside of your packages.  see
+    # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files
+    # In this case, 'data_file' will be installed into
+    # '<sys.prefix>/my_data'
     data_files=[],
 
     # To provide executable scripts, use entry points in preference to the
@@ -86,14 +90,12 @@ setup(
     entry_points='''
         [ckan.plugins]
         workflow=ckanext.workflow.plugin:WorkflowPlugin
+        native_workflow=ckanext.workflow.plugin:NativeWorkflowPlugin
         test_workflow=ckanext.workflow.tests.plugin:TestWorkflowPlugin
         test_workflow_override=ckanext.workflow.tests.plugin:TestWorkflowOverridePlugin
 
-	[babel.extractors]
-	ckan = ckan.lib.extract:extract_ckan
-
-        [paste.paster_command]
-        workflow=ckanext.workflow.command:WorkflowCommand
+        [babel.extractors]
+        ckan = ckan.lib.extract:extract_ckan
 
     ''',
 

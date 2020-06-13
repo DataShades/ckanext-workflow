@@ -7,12 +7,9 @@ import ckan.plugins as p
 from ckan.lib.plugins import DefaultPermissionLabels
 
 
-import ckanext.workflow.helpers as helpers
-import ckanext.workflow.logic.action as action
-import ckanext.workflow.logic.auth as auth
-import ckanext.workflow.interface as interface
-import ckanext.workflow.states as states
-import ckanext.workflow.utils as utils
+from ckanext.workflow.logic import action, auth
+
+from ckanext.workflow import helpers, interface, states, utils
 
 
 class WorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
@@ -20,7 +17,6 @@ class WorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
     p.implements(p.IAuthFunctions)
     p.implements(p.IActions)
     p.implements(p.IPermissionLabels, inherit=True)
-    p.implements(interface.IWorkflow, inherit=True)
 
     # ITemplateHelpers
 
@@ -42,7 +38,8 @@ class WorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
     def get_dataset_labels(self, dataset_obj):
         state = tk.h.workflow_get_state(dataset_obj.as_dict())
         labels = super(WorkflowPlugin, self).get_dataset_labels(dataset_obj)
-        labels = state.get_dataset_permission_labels(labels)
+        if state:
+            labels = state.get_dataset_permission_labels(labels)
         return labels
 
     def get_user_dataset_labels(self, user_obj):
@@ -51,9 +48,13 @@ class WorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
             labels = plugin.get_user_permission_labels(user_obj, labels)
         return labels
 
+
+class NativeWorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
+    p.implements(interface.IWorkflow, inherit=True)
+
     # IWorkflow
 
     def get_state_for_package(self, pkg_dict):
-        private = pkg_dict.get('private', True)
+        private = pkg_dict.get("private", True)
         State = states.PrivateState if private else states.PublicState
         return State(pkg_dict).with_weight(utils.Weight.fallback)

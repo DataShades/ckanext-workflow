@@ -5,14 +5,64 @@
 .. image:: https://codecov.io/gh/DataShades/ckanext-workflow/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/DataShades/ckanext-workflow
 
+.. image:: https://api.codeclimate.com/v1/badges/a6fef8087372d2f4f3c8/maintainability
+   :target: https://codeclimate.com/github/DataShades/ckanext-workflow/maintainability
+   :alt: Maintainability
+
 ================
 ckanext-workflow
 ================
 
-.. Put a description of your extension here:
-   What does it do? What features does it have?
-   Consider including some screenshots or embedding a video!
+Add a bit of workflow into dataset management lifecycle.
 
+This extension provides basically just a basis for creation of custom
+workfrows. Using few abstractions, it simplifies switching between
+different states and provides handles for common access management
+tasks(for example, do not show dataset with particular state in search
+results).
+
+
+Using existing workflows
+------------------------
+
+In order to enable custom workflow, one need to enable plugin with
+`IWorkflow` implementation. For example, `native_workflow` provided by
+current extension enables management of original CKAN's state
+(private/public) using `ckanext-workflow` toolset.
+
+After adding extension with workflow implementation to the list of
+enabled plugin, make a call to `workflow_state_change` API action,
+passing id of updated package, alongside with any additional data
+required for defining following state of the package. There is no any
+mandatory key in provided data(except for id), so reffer to the docs
+of particalar workflow, you are using.
+
+If you need more low-level control, follow pattern bellow::
+
+  # obtain current state of package
+  state = toolkit.h.workflow_get_state(pkg_dict)
+
+  # if there is no state, either you forgot to enable plugin,
+  # implementing the forkflow, or none of plugins can handle current
+  # package.
+  if state is None:
+      return
+
+  # make all required changes in package and return new state, based
+  # on provided `data_dict`
+  new_state = state.change(data_dict)
+
+  # Commit all che chages to the package
+  new_state.save()
+
+
+Create custom workflow
+----------------------
+
+.. TBD
+
+Built-in workflows
+------------------
 
 Installation
 ------------

@@ -1,34 +1,50 @@
 # -*- coding: utf-8 -*-
 
-
+import logging
 from ckanext.workflow.interface import State
+
+log = logging.getLogger(__name__)
 
 
 class PrivateState(State):
 
-    name = 'private'
+    name = "private"
 
-    def prev(self, **kwargs):
-        return self
+    def change(self, data_dict):
+        if "private" in data_dict:
+            private = data_dict["private"]
+        else:
+            log.warning("NativeWorkflow expects `private` key")
+            if "private" not in self.ctx:
+                self.fix_ctx()
+            private = self.ctx["private"]
 
-    def next(self, **kwargs):
-        self.ctx['private'] = False
+        if private:
+            return self
+        self.ctx["private"] = False
         return PublicState(self.ctx)
 
     def fix_ctx(self):
-        self.ctx['private'] = True
+        self.ctx["private"] = True
 
 
 class PublicState(State):
 
-    name = 'public'
+    name = "public"
 
-    def prev(self, **kwargs):
-        self.ctx['private'] = True
-        return PrivateState(self.ctx)
+    def change(self, data_dict):
+        if "private" in data_dict:
+            private = data_dict["private"]
+        else:
+            log.warning("NativeWorkflow expects `private` key")
+            if "private" not in self.ctx:
+                self.fix_ctx()
+            private = self.ctx["private"]
 
-    def next(self, **kwargs):
-        return self
+        if not private:
+            return self
+        self.ctx["private"] = True
+        return PublicState(self.ctx)
 
     def fix_ctx(self):
-        self.ctx['private'] = False
+        self.ctx["private"] = False
