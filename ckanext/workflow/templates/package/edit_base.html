@@ -41,18 +41,16 @@
 	  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
 	  <h4 class="modal-title">Confirmation</h4>
 	</div>
-	<div class="modal-body">
+	<div class="modal-body row">
     {% if pkg is defined %}
       <form action="{{ h.url_for('workflow.workflow_reject', id=pkg.name) }}" method="POST" id="reason-of-rejection">
     {% endif %}
 
 
-            <div class="form-group">
-	      <label for="reason-text" class="col-sm-2 control-label">Provide a reason of this action</label>
-	      <div class="col-sm-10">
+	      <label for="reason-text" class="col-sm-3 control-label">Provide a reason of this action</label>
+	      <div class="col-sm-9">
 		<textarea name="reason" id="reason-text" class="form-control"  cols="60" style="resize:none" rows="3" required="required"></textarea>
 	      </div>
-            </div>
 
           </form>
 	</div>
