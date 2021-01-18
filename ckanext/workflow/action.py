@@ -5,6 +5,7 @@ from ckan.plugins.interfaces import IDomainObjectModification
 import ckan.plugins.toolkit as tk
 import ckan.model as model
 import ckanext.workflow.helpers as workflow_helpers
+from ckanext.workflow.interfaces import IWorkflow
 
 
 ignored_fields = (
@@ -65,6 +66,9 @@ def _update_workflow_stage(field, value, pkg):
 
     for plugin in plugins.PluginImplementations(IDomainObjectModification):
         plugin.notify(pkg, 'changed')
+    
+    for plugin in plugins.PluginImplementations(IWorkflow):
+        plugin.workflow_update_state(field, value, pkg)
 
 
 def create_dataset_revision(context, data_dict):

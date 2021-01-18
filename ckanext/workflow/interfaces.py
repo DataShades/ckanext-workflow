@@ -21,3 +21,10 @@ class IWorkflow(Interface):
         """
 
         return dict()
+
+    def workflow_update_state(self, field, value, pkg):
+        """An ability to modify the package or do some actions after workflow status is changed.
+
+        """
+
+        pass

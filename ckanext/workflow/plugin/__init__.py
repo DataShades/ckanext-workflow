@@ -164,6 +164,9 @@ class WorkflowPlugin(MixinPlugin, plugins.SingletonPlugin):
     def register_workflows(self):
         return dict(base=BaseWorkflow())
 
+    def workflow_update_state(self, field, value, pkg):
+        pass
+
     # IValidators
 
     def get_validators(self):
