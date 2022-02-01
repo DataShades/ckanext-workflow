@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import abc
+from typing import Optional
 
 import ckantoolkit as tk
 
@@ -44,24 +47,13 @@ class State(object):
         """
         tk.get_action("package_patch")(context, self.ctx)
 
-    def with_weight(self, weight):
-        return (weight, self)
-
 
 class IWorkflow(interfaces.Interface):
-    def get_state_for_package(self, pkg_dict):
-        """Return possible state for package.
-
-        Returned value is a tuple, containing weight(probability that
-        state is correct) and state itself. From all the states
-        returned by different implementations of IWorkflow, the one
-        with highest weight wins. Use `ckanext.workflow.utils.Weight`
-        enum options as weight values.
-
-        :rtype: Tuple(workflow.utils.Weight, State|None)
+    def get_state_for_package(self, pkg_dict) -> Optional[State]:
+        """Return current state of the package
 
         """
-        return (0, None)
+        return
 
     def get_user_permission_labels(self, user_obj, labels):
         """Update user's permission labels.

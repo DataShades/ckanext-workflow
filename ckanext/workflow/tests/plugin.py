@@ -15,24 +15,9 @@ class TestWorkflowPlugin(p.SingletonPlugin):
             State = states.ReviewState
         else:
             State = states.PublishedState
-        return State(pkg_dict).with_weight(utils.Weight.handler)
+        return State(pkg_dict)
 
     def get_user_permission_labels(self, user_obj, labels):
         if user_obj:
             labels.extend(["draft", "review", "published"])
         return labels
-
-
-class TestWorkflowOverridePlugin(p.SingletonPlugin):
-    p.implements(interface.IWorkflow, inherit=True)
-
-    def get_state_for_package(self, pkg_dict):
-        if pkg_dict["state"] == "draft":
-            return states.OverridenDraftState(pkg_dict).with_weight(
-                utils.Weight.default
-            )
-        elif pkg_dict["private"]:
-            return states.OverridenReviewState(pkg_dict).with_weight(
-                utils.Weight.override
-            )
-        return (0, None)

@@ -26,15 +26,7 @@ def workflow_get_state(pkg_dict):
     >>> workflow_get_state({'private': False}).name
     'public'
     """
-    states_with_weight = sorted(
-        filter(
-            None,
-            [
-                impl.get_state_for_package(pkg_dict)
-                for impl in p.PluginImplementations(interface.IWorkflow)
-            ],
-        )
-    )
-    states = [state for (weight, state) in states_with_weight if weight > 0]
-
-    return states[-1] if states else None
+    for impl in p.PluginImplementations(interface.IWorkflow):
+        state = impl.get_state_for_package(pkg_dict)
+        if state:
+            return state

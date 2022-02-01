@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 
 import ckantoolkit as tk
 
@@ -57,4 +58,4 @@ class NativeWorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
     def get_state_for_package(self, pkg_dict):
         private = pkg_dict.get("private", True)
         State = states.PrivateState if private else states.PublicState
-        return State(pkg_dict).with_weight(utils.Weight.fallback)
+        return State(pkg_dict)

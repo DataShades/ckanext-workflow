@@ -42,27 +42,3 @@ class PublishedState(interface.State):
             self.ctx["private"] = True
             return ReviewState(self.ctx)
         return self
-
-
-class OverridenDraftState(interface.State):
-    name = "overriden-draft"
-
-    def change(self, data_dict):
-        if data_dict.get("review"):
-            self.ctx["state"] = "active"
-            self.ctx["private"] = True
-            return OverridenReviewState(self.ctx)
-        return self
-
-
-class OverridenReviewState(interface.State):
-    name = "overriden-review"
-
-    def change(self, data_dict):
-        if data_dict.get("publish"):
-            self.ctx["private"] = False
-            return PublishedState(self.ctx)
-        elif data_dict.get("rework"):
-            self.ctx["state"] = "draft"
-            return OverridenDraftState(self.ctx)
-        return self
