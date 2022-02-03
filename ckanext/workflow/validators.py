@@ -53,8 +53,8 @@ def workflow_stage_validator(key, data, errors, context):
                 h._workflow_stage_field()) or first_stage
         data[key] = first_stage
         return
-    if pkg is None and stage != first_stage:
-        raise Invalid('You cannot skip fist stage')
+    # if pkg is None and stage != first_stage:
+        # raise Invalid('You cannot skip fist stage')
     current_stage = pkg.extras.get(key[0]) if pkg else first_stage
 
     if current_stage == stage:
