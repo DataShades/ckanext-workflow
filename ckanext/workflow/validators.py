@@ -64,6 +64,10 @@ def workflow_stage_validator(key, data, errors, context):
         wf.get_stage(stage)
     except KeyError:
         raise Invalid('Unsupported workflow stage')
+
+    if context.get("ignore_auth", False):
+        return
+
     user = context['auth_user_obj']
     if user and (user.sysadmin or h.is_site_admin(user)):
         return
