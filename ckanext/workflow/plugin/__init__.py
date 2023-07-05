@@ -139,7 +139,6 @@ class WorkflowPlugin(MixinPlugin, plugins.SingletonPlugin):
     plugins.implements(plugins.IAuthFunctions)
     plugins.implements(plugins.IActions)
     plugins.implements(plugins.ITemplateHelpers)
-    plugins.implements(plugins.IRoutes, inherit=True)
     plugins.implements(plugins.IPermissionLabels)
 
     # IConfigurer
@@ -223,4 +222,3 @@ class WorkflowPlugin(MixinPlugin, plugins.SingletonPlugin):
         # workflow_helpers._workflow_stage_field(), ' OR '.join(Workflow.get_all_finish_stages())
         search_params['include_drafts'] = True
         return search_params
-
