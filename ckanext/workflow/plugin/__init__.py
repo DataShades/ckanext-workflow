@@ -204,7 +204,7 @@ class WorkflowPlugin(MixinPlugin, plugins.SingletonPlugin):
 
     def get_user_dataset_labels(self, user_obj):
         labels = DefaultPermissionLabels().get_user_dataset_labels(user_obj)
-        if user_obj:
+        if user_obj and user_obj.name:
             orgs = tk.get_action(u'organization_list_for_user')(
                 {
                     u'user': user_obj.id
