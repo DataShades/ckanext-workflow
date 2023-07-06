@@ -14,7 +14,7 @@
 
       {% for package in datasets %}
         <li>
-          {% link_for package.title, controller='dataset' if h.ckan_version() > '2.9' else 'package', action='read', id=package.name %}
+          {% link_for package.title, controller='dataset' if h.ckan_version().split(".")[1]|int > 9 else 'package', action='read', id=package.name %}
           {% if h.is_revision(package) %}
             <span class="label label-warning">revision</span>
           {% endif %}
