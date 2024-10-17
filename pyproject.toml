@@ -1,15 +1,45 @@
-[tool.black]
-line-length = 79
+[build-system]
+requires = [ "setuptools",]
+build-backend = "setuptools.build_meta"
 
-[tool.towncrier]
-directory = "changes"
-package = "ckanext.workflow"
-package_dir = "ckanext/workflow"
-filename = "CHANGELOG.rst"
-title_format = "{version} ({project_date})"
-issue_format = "{issue}"
+[project]
+name = "ckanext-workflow"
+version = "2.0.0.post1"
+description = "Extended workflow for dataset lifecycle"
+classifiers = [ "Development Status :: 4 - Beta", "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)", "Programming Language :: Python :: 3.7", "Programming Language :: Python :: 3.8", "Programming Language :: Python :: 3.9", "Programming Language :: Python :: 3.10",]
+keywords = [ "CKAN",]
+requires-python = ">= 3.7"
+dependencies = []
+authors = [
+    {name = "DataShades", email = "datashades@linkdigital.com.au"},
+    {name = "Sergey Motornyuk", email = "sergey.motornyuk@linkdigital.com.au"},
+]
+maintainers = [
+    {name = "DataShades", email = "datashades@linkdigital.com.au"},
+]
 
-[[tool.towncrier.type]]
-directory = "removal"
-name = "Deprecations and removals"
-showcontent = true
+[project.readme]
+file = "README.rst"
+content-type = "text/x-rst"
+
+[project.license]
+text = "AGPL"
+
+[project.urls]
+Homepage = "https://github.com/smotornyuk/ckanext-workflow"
+
+[project.entry-points."ckan.plugins"]
+workflow = "ckanext.workflow.plugin:WorkflowPlugin"
+native_workflow = "ckanext.workflow.plugin:NativeWorkflowPlugin"
+test_workflow = "ckanext.workflow.tests.plugin:TestWorkflowPlugin"
+
+[project.entry-points."babel.extractors"]
+ckan = "ckan.lib.extract:extract_ckan"
+
+[tool.pytest.ini_options]
+filterwarnings = [ "ignore::sqlalchemy.exc.SADeprecationWarning", "ignore::sqlalchemy.exc.SAWarning", "ignore::DeprecationWarning",]
+testpaths = [ "ckanext/workflow/tests",]
+addopts = "--ckan-ini test.ini"
+
+[tool.setuptools.packages]
+find = {}
