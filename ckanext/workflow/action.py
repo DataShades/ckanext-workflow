@@ -2,6 +2,7 @@ from builtins import str
 import ckan.plugins as plugins
 from ckan.plugins.interfaces import IDomainObjectModification
 
+from ckan.lib.search import rebuild
 import ckan.plugins.toolkit as tk
 import ckan.model as model
 import ckanext.workflow.helpers as workflow_helpers
@@ -56,17 +57,12 @@ def _update_workflow_stage(field, value, pkg):
     :rtype: None
 
     """
-    model.Session.query(model.PackageExtra).filter_by(
-        package_id=pkg.id,
-        key=field
-    ).update({
-        'value': value
-    })
+    pkg.extras[field] = value
     model.Session.commit()
-
+    rebuild(pkg.id)
     for plugin in plugins.PluginImplementations(IDomainObjectModification):
         plugin.notify(pkg, 'changed')
-    
+
     for plugin in plugins.PluginImplementations(IWorkflow):
         plugin.workflow_update_state(field, value, pkg)
 

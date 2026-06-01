@@ -34,11 +34,8 @@ def get_dataset_revision(id):
 def get_dataset_revision_query(id):
     """Ask for dataset that looks like revision for `id`.
     """
-    return model.Session.query(model.Package).join(
-        model.PackageExtra
-    ).filter_by(
-            key=_revision_field(),
-            value=id
+    return model.Session.query(model.Package).filter(
+            model.Package.extras[_revision_field()].astext==id
     )
 
 
