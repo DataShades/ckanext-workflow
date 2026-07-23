@@ -10,7 +10,7 @@ from ckan.lib.plugins import DefaultPermissionLabels
 
 from ckanext.workflow.logic import action, auth
 
-from ckanext.workflow import helpers, interface, states, utils
+from ckanext.workflow import helpers, interface, states
 
 
 class WorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):

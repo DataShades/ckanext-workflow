@@ -6,7 +6,6 @@ import ckan.model as model
 import ckan.lib.search as search
 import ckan.tests.helpers as helpers
 import ckan.tests.factories as factories
-import ckanext.workflow.tests.states as states
 
 
 @pytest.mark.ckan_config("ckan.plugins", "workflow test_workflow")
@@ -43,9 +42,7 @@ def test_search_labels():
     result = tk.get_action("package_search")(context, search_dict)
     assert result["count"] == 1
 
-    helpers.call_action(
-        "workflow_state_change", id=dataset["id"], publish=True
-    )
+    helpers.call_action("workflow_state_change", id=dataset["id"], publish=True)
     search_dict = {"include_drafts": True, "include_private": True}
     query = search.query_for(model.Package)
     result = query.run({"fq": "+state:*"}, permission_labels=["draft"])

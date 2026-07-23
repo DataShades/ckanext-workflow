@@ -19,7 +19,10 @@ def test_state_field_customized():
 
 @pytest.mark.parametrize(
     "private,state",
-    [(True, states.PrivateState), (False, states.PublicState),],
+    [
+        (True, states.PrivateState),
+        (False, states.PublicState),
+    ],
 )
 @pytest.mark.usefixtures("app")
 @pytest.mark.ckan_config("ckan.plugins", "workflow native_workflow")
@@ -32,16 +35,11 @@ def test_get_state_default(private, state):
 @pytest.mark.ckan_config("ckan.plugins", "workflow test_workflow")
 @pytest.mark.usefixtures("with_plugins", "app")
 def test_get_state_custom():
-
     dataset = {"private": True, "state": "draft"}
     assert isinstance(tk.h.workflow_get_state(dataset), test_states.DraftState)
 
     dataset = {"private": True, "state": "active"}
-    assert isinstance(
-        tk.h.workflow_get_state(dataset), test_states.ReviewState
-    )
+    assert isinstance(tk.h.workflow_get_state(dataset), test_states.ReviewState)
 
     dataset = {"private": False, "state": "active"}
-    assert isinstance(
-        tk.h.workflow_get_state(dataset), test_states.PublishedState
-    )
+    assert isinstance(tk.h.workflow_get_state(dataset), test_states.PublishedState)

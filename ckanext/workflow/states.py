@@ -7,7 +7,6 @@ log = logging.getLogger(__name__)
 
 
 class PrivateState(State):
-
     name = "private"
 
     def change(self, data_dict):
@@ -29,7 +28,6 @@ class PrivateState(State):
 
 
 class PublicState(State):
-
     name = "public"
 
     def change(self, data_dict):

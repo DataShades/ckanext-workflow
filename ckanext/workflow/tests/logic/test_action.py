@@ -11,15 +11,11 @@ def test_state_chage(app):
     dataset = factories.Dataset(private=True, owner_org=org["id"])
     assert dataset["private"]
 
-    helpers.call_action(
-        "workflow_state_change", id=dataset["id"], private=False
-    )
+    helpers.call_action("workflow_state_change", id=dataset["id"], private=False)
     dataset = helpers.call_action("package_show", id=dataset["id"])
     assert not dataset["private"]
 
-    helpers.call_action(
-        "workflow_state_change", id=dataset["id"], private=True
-    )
+    helpers.call_action("workflow_state_change", id=dataset["id"], private=True)
 
     dataset = helpers.call_action("package_show", id=dataset["id"])
     assert dataset["private"]

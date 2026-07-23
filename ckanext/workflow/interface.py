@@ -16,43 +16,35 @@ class State(object):
 
     @property
     def ctx(self):
-        """Related package dict.
-        """
+        """Related package dict."""
         return self._ctx
 
     @classmethod
     def name(cls):
-        """Machine readable name of state.
-        """
+        """Machine readable name of state."""
         return cls.__name__
 
     @abc.abstractmethod
     def change(self, data_dict):
-        """Transform ctx and return updated state for the new ctx.
-        """
+        """Transform ctx and return updated state for the new ctx."""
         return self
 
     def get_dataset_permission_labels(self, existing_labels):
-        """Append/remove permission labels depending on current state.
-        """
+        """Append/remove permission labels depending on current state."""
         return existing_labels
 
     def fix_ctx(self):
-        """Change ctx making it suitable for the current state.
-        """
+        """Change ctx making it suitable for the current state."""
         pass
 
     def save(self, context):
-        """Persist all changes to current context.
-        """
+        """Persist all changes to current context."""
         tk.get_action("package_patch")(context, self.ctx)
 
 
 class IWorkflow(interfaces.Interface):
     def get_state_for_package(self, pkg_dict) -> Optional[State]:
-        """Return current state of the package
-
-        """
+        """Return current state of the package"""
         return
 
     def get_user_permission_labels(self, user_obj, labels):

@@ -1,7 +1,6 @@
 import ckan.plugins as p
 
 import ckanext.workflow.interface as interface
-import ckanext.workflow.utils as utils
 import ckanext.workflow.tests.states as states
 
 
