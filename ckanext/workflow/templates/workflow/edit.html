@@ -1,0 +1,198 @@
+{% extends "page.html" %}
+
+{% block subtitle %}{% if workflow %}Edit Workflow - {{ workflow.name }}{% else %}New Workflow{% endif %}{% endblock %}
+
+{% block primary %}
+  <article class="module">
+    <div class="module-content">
+      <div style="margin-bottom: 20px;">
+        <a href="/admin/workflows" class="btn btn-default"><i class="fa fa-arrow-left"></i> Back to List</a>
+        <h1 style="margin-top: 15px;">{% if workflow %}Edit Workflow: {{ workflow.name }}{% else %}Create New Workflow{% endif %}</h1>
+      </div>
+
+      <form class="form-horizontal" method="POST" style="margin-top: 20px;">
+        <div class="panel panel-default" style="border: 1px solid #ddd; border-radius: 4px; padding: 20px; margin-bottom: 20px; background-color: #fcfcfc;">
+          <h3 style="margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Workflow General Info</h3>
+
+          <div class="form-group" style="margin-bottom: 15px;">
+            <label class="col-sm-2 control-label" for="field-name" style="font-weight: bold;">Workflow Name *</label>
+            <div class="col-sm-10">
+              <input id="field-name" type="text" name="name" value="{{ workflow.name if workflow else '' }}" placeholder="e.g., Publication Approval Workflow" class="form-control" required style="width: 100%; max-width: 500px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 15px;">
+            <label class="col-sm-2 control-label" for="field-description" style="font-weight: bold;">Description</label>
+            <div class="col-sm-10">
+              <textarea id="field-description" name="description" placeholder="Describe the purpose of this workflow..." class="form-control" rows="3" style="width: 100%; max-width: 500px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">{{ workflow.description if workflow else '' }}</textarea>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 15px;">
+            <label class="col-sm-2 control-label" for="field-dataset-type" style="font-weight: bold;">Dataset Type Trigger</label>
+            <div class="col-sm-10">
+              <select id="field-dataset-type" name="dataset_type" class="form-control" style="width: 100%; max-width: 250px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                <option value="all" {% if workflow and workflow.dataset_type == 'all' %}selected{% endif %}>All Dataset Types</option>
+                <option value="dataset" {% if workflow and workflow.dataset_type == 'dataset' %}selected{% endif %}>Standard Dataset</option>
+                <option value="harvest" {% if workflow and workflow.dataset_type == 'harvest' %}selected{% endif %}>Harvest Source</option>
+              </select>
+              <p class="help-block" style="margin-top: 5px; font-size: 12px; color: #737373;">Select when this workflow should trigger.</p>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 15px;">
+            <div class="col-sm-offset-2 col-sm-10">
+              <div class="checkbox">
+                <label style="font-weight: bold;">
+                  <input type="checkbox" name="enabled" value="enabled" {% if not workflow or workflow.enabled %}checked{% endif %}> Enable this workflow
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel panel-default" style="border: 1px solid #ddd; border-radius: 4px; padding: 20px; margin-bottom: 20px; background-color: #fcfcfc;">
+          <h3 style="margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Workflow Steps Sequence</h3>
+
+          <table class="table table-bordered table-striped" id="steps-table">
+            <thead>
+              <tr style="background-color: #f5f5f5;">
+                <th style="width: 50px; text-align: center;">#</th>
+                <th style="width: 200px;">Step Name *</th>
+                <th style="width: 150px;">Assigned Role *</th>
+                <th style="width: 150px;">Step Type *</th>
+                <th style="width: 120px;">Timeout (sec)</th>
+                <th>Instructions / Guidelines</th>
+                <th style="width: 80px; text-align: center;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if workflow and workflow.steps %}
+                {% for step in workflow.steps %}
+                  <tr>
+                    <td class="step-idx" style="text-align: center; vertical-align: middle; font-weight: bold;">{{ loop.index }}</td>
+                    <td>
+                      <input type="text" name="step_name[]" value="{{ step.name }}" class="form-control input-sm" required style="width: 100%; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+                    </td>
+                    <td>
+                      <select name="step_role[]" class="form-control input-sm" style="width: 100%; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+                        <option value="member" {% if step.assigned_role == 'member' %}selected{% endif %}>Member</option>
+                        <option value="editor" {% if step.assigned_role == 'editor' %}selected{% endif %}>Editor</option>
+                        <option value="admin" {% if step.assigned_role == 'admin' %}selected{% endif %}>Admin</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select name="step_type[]" class="form-control input-sm" style="width: 100%; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+                        <option value="approval" {% if step.step_type == 'approval' %}selected{% endif %}>Approval</option>
+                        <option value="manual_task" {% if step.step_type == 'manual_task' %}selected{% endif %}>Manual Task</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input type="number" name="step_timeout[]" value="{{ step.timeout_duration or '' }}" placeholder="None" class="form-control input-sm" style="width: 100%; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+                    </td>
+                    <td>
+                      <input type="text" name="step_instructions[]" value="{{ step.instructions or '' }}" placeholder="Enter instructions for assignee..." class="form-control input-sm" style="width: 100%; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+                    </td>
+                    <td style="text-align: center; vertical-align: middle;">
+                      <button type="button" class="btn btn-danger btn-sm remove-step-btn" onclick="removeStepRow(this)"><i class="fa fa-trash"></i></button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr id="empty-row-placeholder">
+                  <td colspan="7" class="text-center text-muted" style="padding: 20px;">
+                    No steps added yet. Click "Add Step" below to configure workflow sequence.
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+
+          <div style="margin-top: 15px;">
+            <button type="button" class="btn btn-info" id="add-step-btn"><i class="fa fa-plus"></i> Add Step</button>
+          </div>
+        </div>
+
+        <div class="form-actions" style="border-top: 1px solid #e5e5e5; padding-top: 20px; text-align: right;">
+          <button type="submit" class="btn btn-success" style="font-weight: bold; padding: 10px 20px; font-size: 14px;">
+            <i class="fa fa-save"></i> Save Workflow Definition
+          </button>
+        </div>
+      </form>
+    </div>
+  </article>
+
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+      var addBtn = document.getElementById("add-step-btn");
+      var tableBody = document.querySelector("#steps-table tbody");
+
+      addBtn.addEventListener("click", function() {
+        var placeholder = document.getElementById("empty-row-placeholder");
+        if (placeholder) {
+          placeholder.remove();
+        }
+
+        var rowCount = tableBody.querySelectorAll("tr").length + 1;
+        var newRow = document.createElement("tr");
+        newRow.innerHTML = `
+          <td class="step-idx" style="text-align: center; vertical-align: middle; font-weight: bold;">\${rowCount}</td>
+          <td>
+            <input type="text" name="step_name[]" class="form-control input-sm" required placeholder="Step name (e.g. Approve Metadata)" style="width: 100%; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+          </td>
+          <td>
+            <select name="step_role[]" class="form-control input-sm" style="width: 100%; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+              <option value="member">Member</option>
+              <option value="editor" selected>Editor</option>
+              <option value="admin">Admin</option>
+            </select>
+          </td>
+          <td>
+            <select name="step_type[]" class="form-control input-sm" style="width: 100%; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+              <option value="approval">Approval</option>
+              <option value="manual_task">Manual Task</option>
+            </select>
+          </td>
+          <td>
+            <input type="number" name="step_timeout[]" placeholder="None" class="form-control input-sm" style="width: 100%; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+          </td>
+          <td>
+            <input type="text" name="step_instructions[]" placeholder="Enter instructions for assignee..." class="form-control input-sm" style="width: 100%; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+          </td>
+          <td style="text-align: center; vertical-align: middle;">
+            <button type="button" class="btn btn-danger btn-sm remove-step-btn" onclick="removeStepRow(this)"><i class="fa fa-trash"></i></button>
+          </td>
+        `;
+        tableBody.appendChild(newRow);
+        updateStepIndices();
+      });
+    });
+
+    function removeStepRow(btn) {
+      var row = btn.closest("tr");
+      var tableBody = row.parentNode;
+      row.remove();
+
+      if (tableBody.querySelectorAll("tr").length === 0) {
+        var placeholder = document.createElement("tr");
+        placeholder.id = "empty-row-placeholder";
+        placeholder.innerHTML = `
+          <td colspan="7" class="text-center text-muted" style="padding: 20px;">
+            No steps added yet. Click "Add Step" below to configure workflow sequence.
+          </td>
+        `;
+        tableBody.appendChild(placeholder);
+      } else {
+        updateStepIndices();
+      }
+    }
+
+    function updateStepIndices() {
+      var tableBody = document.querySelector("#steps-table tbody");
+      var rows = tableBody.querySelectorAll("tr:not(#empty-row-placeholder)");
+      rows.forEach(function(row, index) {
+        row.querySelector(".step-idx").textContent = index + 1;
+      });
+    }
+  </script>
+{% endblock %}

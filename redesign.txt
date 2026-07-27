@@ -1,0 +1,1091 @@
+I need to write an response regarding solution architecture. I'll post some details now and tell you when you can produce the response
+
+---
+
+Sounds good. Send me the details in as many messages as you need.
+
+I'll wait until you explicitly tell me to produce the response. Until then, I'll just absorb the information and won't draft or summarize it unless you ask.
+
+---
+
+Fist, here'sthe request from po:
+
+he second requirements we need to work on is A2 - Set up workflows. This one I have no idea how to start. From previous conversation my impression is that this isn’t the easiest thing to do in CKAN. I had a though on this, do we need to do it “in” CKAN. What I’m thinking is we have access to all the API’s for creating datasets. Maybe there is a default CKAN way to add datasets (direct approach for sysadmin) and we don’t touch the standard CKAN workflow. For this requirement we add a new extension/ reuse maybe some other technology and move the workflow in there and make API calls as needed. This was just an idea but we’ll need to do something for the demo
+
+---
+
+Got it. I've noted the PO's request.
+
+So far, the key points are:
+
+* **Requirement:** A2 – Set up workflows.
+* The PO believes CKAN's native workflow capabilities are limited and isn't sure how to approach it.
+* Proposed architectural direction:
+
+  * Don't implement the workflow *inside* CKAN if it isn't a good fit.
+  * Leave the standard CKAN dataset creation flow intact (especially for sysadmins).
+  * Implement a separate workflow layer (possibly a new CKAN extension or another service/technology).
+  * The workflow layer would orchestrate the process and use CKAN's APIs to create/update datasets as needed.
+* There needs to be something demonstrable for the demo.
+
+I'll keep this in mind and wait for the rest of the context before drafting the response.
+
+---
+
+Second. Here reference from client requirements
+
+Data Catalogue Admin configures a “publish” workflow to
+publish new Datasets
+Defines the steps required in the workflow, assigns roles
+that can complete each step, sets maximum duration
+allowed to complete the step, defines actions for escalation
+if the step is not completed within the duration
+Workflow can be configured to trigger notifications and
+reminders to the workflow participants
+
+
+
+The workflow can be configured to initiate when specific
+actions are executed in the Data Catalogue e.g. Publish
+workflow is triggered whenever a new Dataset is Listed; or
+whenever a specific type of Dataset is Listed; or whenever a
+type of Metadata Template is used
+Demonstrate:
+Standard existing workflows available in the Data
+Catalogue, and the extent to which these can be tailored;
+How the Catalogue Admin would modify existing “publish”
+workflow or set up a new workflow from scratch;
+How the workflow participants would execute the steps in
+the workflow; and
+How Catalogue Admin (or any other user with the
+appropriate permission levels) would view the overall
+progress of the workflow at a point in time.
+
+1. Data Catalogue provides
+standard workflows aligned
+to industry best practices;
+whilst also allowing client to
+tailor steps or set up new
+client-specific workflows as
+required
+2. Natively handles workflow
+routing, notifying reviewers,
+and holding the Dataset in a
+"Draft/Pending" state whilst
+the workflow is in progress.
+3. Provides capabilities to
+handle real-life situations in a
+workflow e.g. a workflow
+step is not approved by
+participant, workflow not
+completed in time and needs
+to escalate or be re-assigned,
+workflow needs to be
+canceled etc.
+4. Automatically updates the
+Dataset state when the
+workflow successfully
+concludes.
+5. Capabilities available to
+monitor progress of all
+workflows, as well as
+progress / troubleshooting for
+a specific workflow.
+
+---
+
+Received. I've captured the client requirements.
+
+The main capabilities they're asking for are:
+
+* **Configurable workflows** by a Catalogue Admin.
+* Ability to define:
+
+  * workflow steps,
+  * participant roles,
+  * SLAs/time limits,
+  * escalation rules,
+  * notifications and reminders.
+* **Trigger conditions**, for example:
+
+  * any new dataset,
+  * specific dataset types,
+  * specific metadata templates.
+* Workflow execution that:
+
+  * keeps datasets in **Draft/Pending** while running,
+  * routes tasks to participants,
+  * supports approvals/rejections,
+  * supports reassignment, escalation, cancellation, overdue handling,
+  * automatically publishes/updates dataset state on success.
+* **Monitoring**:
+
+  * overall workflow dashboard,
+  * detailed status/troubleshooting for individual workflows.
+* **Demonstration expectations**:
+
+  * available standard workflows,
+  * tailoring an existing workflow or creating one from scratch,
+  * participant experience,
+  * administrator monitoring experience.
+
+I also notice an important architectural implication:
+
+The wording repeatedly says the platform should **"natively handle"** workflow routing, notifications, draft state, monitoring, etc. That means if we recommend implementing an external workflow engine (or a CKAN extension backed by one), we'll likely need to explain how this still appears as an integrated capability from the user's perspective rather than feeling like a disconnected external system.
+
+I'll wait for the remaining context before drafting the architecture response.
+
+
+---
+
+My idea is that we can use external service like PO suggested, but they mainly focus on task execution. If data admin wants to modify or create a workflow, he'd have to code it, because there will be no interface to manager workflows. So we'll have to build interface, either inside CKAN or for separate utility, so probably it's easier to remain in CKAN ground. We can use workflow services, but they are generally "task runners", so we still have to suggest a way to design(setup from UI) and modify these tasks.
+Now you can give your suggestions
+
+---
+
+I think your assessment is on the right track. The biggest challenge isn't executing a workflow—it's providing a configurable workflow management experience that matches the client's requirements.
+
+Here's how I would frame the architecture.
+
+### Key observation
+
+The client isn't simply asking for workflow execution. They want a **workflow management platform** where a Catalogue Admin can:
+
+* create or modify workflows,
+* configure steps, roles, timers and escalation,
+* define triggers,
+* monitor execution,
+* troubleshoot running workflows.
+
+A workflow engine (Camunda, Temporal, Flowable, n8n, etc.) solves only part of that problem. It executes workflows very well, but most of them expect workflows to be defined by developers rather than business users.
+
+### What an external workflow engine gives us
+
+Using an external engine provides:
+
+* workflow state management
+* task assignment
+* timers
+* retries
+* escalations
+* persistence
+* APIs
+* audit trail
+
+What it **doesn't** provide (at least not in the way the client expects):
+
+* a business-friendly UI for creating workflows
+* CKAN-specific configuration
+* trigger configuration
+* integration with CKAN permissions
+* monitoring embedded into the catalogue
+
+So we'd still need to build a significant amount ourselves.
+
+### I think there are two realistic architectures
+
+#### Option 1 — Thin workflow engine + CKAN extension (my preferred approach)
+
+Build a CKAN extension responsible for:
+
+* Workflow Designer
+
+  * configure steps
+  * assign CKAN roles
+  * configure timers
+  * configure notifications
+  * configure triggers
+
+* Workflow Dashboard
+
+  * active workflows
+  * pending approvals
+  * history
+  * troubleshooting
+
+* Workflow API
+
+Then let an external engine execute the configured workflow.
+
+The extension becomes the "brain" from the user's perspective, while the workflow engine becomes an implementation detail.
+
+Advantages:
+
+* users stay inside CKAN
+* satisfies "Catalogue Admin configures workflows"
+* reuse mature workflow engine
+* easier to extend later
+
+---
+
+#### Option 2 — Entire workflow implemented inside CKAN
+
+Everything lives inside a CKAN extension.
+
+Pros
+
+* completely integrated
+* simpler deployment
+* no extra infrastructure
+
+Cons
+
+* we reinvent workflow execution
+* timers
+* retries
+* escalation
+* task queue
+* monitoring
+* long-running process management
+
+This becomes a large amount of custom development.
+
+---
+
+### I would avoid
+
+Building everything in an external tool.
+
+For example:
+
+> "Workflow lives in Camunda and admins modify BPMN files."
+
+or
+
+> "Admins edit YAML."
+
+This probably won't satisfy the demonstration requirement because the client explicitly wants to see how a Catalogue Admin configures workflows. Editing code or BPMN isn't really "configuration" from an administrator's perspective.
+
+### One concern with a demo
+
+If this requirement is mainly for a demonstration, I wouldn't over-engineer the workflow designer.
+
+For example, the UI could initially allow configuring:
+
+* workflow name
+* ordered steps
+* responsible role
+* approval/rejection
+* timeout
+* escalation role
+* notification template
+
+That's enough to demonstrate that workflows are configurable without building a full drag-and-drop BPMN editor.
+
+### Suggested response to the PO
+
+I'd propose something along these lines:
+
+> I agree that we don't necessarily need to implement the workflow execution inside CKAN. An external workflow engine is well suited for orchestrating tasks, timers, escalations and approvals while interacting with CKAN through its APIs.
+>
+> However, based on the client requirements, the larger challenge is workflow configuration rather than execution. The Catalogue Admin is expected to create or modify workflows, define steps, roles, triggers, notifications and escalation rules through an administrative interface. Most workflow engines focus on executing predefined workflows rather than providing a business-friendly workflow configuration UI.
+>
+> Because of this, I think we'll still need to implement a workflow management interface, either as a CKAN extension or as a separate application. My preference would be to keep this within CKAN so administrators have a single integrated experience. The CKAN extension would provide the workflow configuration and monitoring UI, while delegating the actual execution to a workflow engine via its APIs. This allows us to leverage a mature orchestration platform without having to build workflow execution from scratch, while still meeting the client's expectation that workflows can be configured and monitored directly within the Data Catalogue.
+
+---
+
+Good. Can you adapt response to my level of english and writing style? As you can see, i'm not a native english speaker and it don't want my resp;onse to looki like a copy-paste from AI
+
+---
+
+I think using an external workflow service is a good idea, and it matches what you suggested. Those services are good at executing workflows, handling tasks, timers, notifications, escalations, etc.
+
+The part I'm more concerned about is workflow configuration. Based on the requirements, the Data Catalogue Admin should be able to create or modify workflows, configure steps, roles, triggers, notifications and so on.
+
+Most workflow engines don't really provide this out of the box. Usually workflows are created by developers, so without additional work the admin would have to modify workflow definitions in code, which doesn't seem to match the requirements.
+
+Because of that, I think we'll still need to build some UI for managing workflows. We could do this as a separate application, but I think keeping it inside CKAN would provide a better user experience and require less context switching.
+
+My preference would be to use an external workflow engine only for the execution part, while the CKAN extension would provide the workflow configuration and monitoring UI. That way we can reuse an existing workflow solution instead of implementing all the execution logic ourselves, while still giving admins the ability to manage workflows from the catalogue.
+
+
+---
+
+Good. Now suggest an detailed architecture using the same text-style as we established - feel free to make more grammar errors, just to look more natural. The suggestion must be twice as big as previous response
+
+---
+
+
+I was thinking a bit more about the architecture, and maybe we can split it into two separate responsibilities.
+
+The workflow engine itself should only be responsible for execution. It would receive workflow definition, keep workflow state, assign tasks, handle timers, reminders, escalations and expose API to check workflow progress. This is what workflow engines are designed for, so I don't think it makes sense to implement this logic from scratch inside CKAN.
+
+On the CKAN side we could develop a new extension which acts as workflow management layer. This extension would provide UI for Catalogue Admin to create new workflows or modify existing ones. For example, admin could define workflow steps, assign CKAN roles to each step, configure notifications, timeout values, escalation rules and also configure when workflow should start (new dataset, specific dataset type, metadata template etc.).
+
+The extension would store workflow configuration in CKAN database and convert it into format accepted by the workflow engine. From user perspective everything still happens inside CKAN, while workflow engine is just executing what was configured.
+
+When user creates or updates dataset, CKAN extension would evaluate configured triggers. If workflow should be started, dataset stays in Draft/Pending state and extension creates new workflow instance using workflow engine API. Every approval or rejection from workflow participants would be sent back to workflow engine, which decides what the next step is. Once workflow completes successfully, CKAN updates dataset state automatically to Published. If workflow is rejected, cancelled or timed out, extension can either keep dataset in Draft state or perform another configured action.
+
+For monitoring we can also keep it inside CKAN. Admin would have dashboard showing all running workflows, current step, assigned user, overdue tasks and completed workflows. Most of this information can be requested from workflow engine API, so we don't have to duplicate execution logic inside CKAN.
+
+I think this architecture gives us quite clean separation. CKAN stays responsible for configuration, permissions, UI and integration with datasets, while workflow engine is responsible only for orchestration. It also gives us possibility to replace workflow engine later if needed, because CKAN extension would be talking only through API.
+
+For the demo we probably don't need to implement full workflow designer. Even simple UI where admin can configure workflow steps, roles, approvals and triggers should be enough to demonstrate that workflows are configurable by administrator and not hardcoded by developers.
+
+---
+
+Good. I want to create a number of jira tickets for dev to implement mvp for the workflow solution. Ticket consist of title, description and acceptance criteria. Here's an example. (before writing tickets, let's discuss plan - I'd prefer to split feature into tickets that would require 4-8 hours of work at most)
+
+Title
+Develop minimal JSON Schema for dataset schemas [CKAN]
+
+
+
+Description
+Create a static JSON Schema file that covers the minimal ckanext-scheming features required for a demo of dynamic schema creation.
+
+Acceptance criteria
+1.  dataset JSON Schema file must validate the types and structure of a minimal ckanext-scheming yaml or json dataset schema including:
+
+    1.  about\_url
+
+    2.  dataset\_type
+
+    3.  dataset\_fields
+
+    4.  resource\_fields
+
+2.  within dataset and resource fields the JSON Schema must validate:
+
+    1.  field\_name
+
+    2.  label (including when given in multiple languages)
+
+    3.  required
+
+    4.  choices (including choices with labels in multiple languages)
+
+    5.  default
+
+    6.  preset (validate against a static list of the presets already present in ckanext-scheming)
+
+    7.  help\_text (including when given in multiple languages)
+
+3.  exercise the JSON Schema using any JSON Schema checking tool against at least 3 of the ckanext-scheming schemas we’re using for client sites and verify that errors reported are only ones we expect (e.g. use of custom presets not in the static list)
+
+4.  verify that mandatory fields like dataset\_type and field\_name and type checking for all fields is enforced by the JSON Schema
+
+---
+
+I think the biggest risk is making the tickets follow the architecture (UI + workflow engine) instead of an MVP. For a demo, I'd optimize for "something that works end-to-end" and defer anything that isn't visible to the client.
+
+I'd split it into layers, with each ticket being independently testable and around 4–8 hours.
+
+## Phase 1 - Foundation
+
+These don't provide UI yet, just the plumbing.
+
+1. Create workflow data model
+2. Add workflow configuration CRUD API
+3. Implement workflow trigger service
+4. Add workflow engine adapter
+5. Persist workflow instance state
+
+---
+
+## Phase 2 - Admin configuration
+
+Visible functionality.
+
+6. Workflow configuration page
+7. Workflow steps editor
+8. Workflow trigger configuration
+9. Workflow role mapping
+
+---
+
+## Phase 3 - Runtime
+
+10. Start workflow when dataset is created
+11. Workflow task page
+12. Approve / Reject actions
+13. Dataset state synchronization
+
+---
+
+## Phase 4 - Monitoring
+
+14. Workflow dashboard
+15. Workflow details page
+
+---
+
+## Phase 5 - Nice to have
+
+16. Notifications
+17. Timeout / escalation
+18. Workflow history
+
+---
+
+## I'd simplify the MVP even more
+
+I actually think the MVP can be done with about **12 tickets**.
+
+### Ticket 1
+
+Workflow configuration model
+
+Store workflow definitions in CKAN.
+
+---
+
+### Ticket 2
+
+Workflow admin page
+
+List workflows.
+
+Create/Edit/Delete.
+
+---
+
+### Ticket 3
+
+Workflow step editor
+
+Simple table.
+
+```
+Step 1
+Role
+Approval required
+
+Step 2
+Role
+Approval required
+```
+
+No drag-drop.
+
+---
+
+### Ticket 4
+
+Workflow trigger
+
+```
+Dataset created
+
+Dataset type
+
+Metadata template
+```
+
+---
+
+### Ticket 5
+
+Workflow engine adapter
+
+Hide implementation behind service.
+
+```
+start_workflow()
+
+complete_task()
+
+cancel_workflow()
+
+get_status()
+```
+
+---
+
+### Ticket 6
+
+Workflow start
+
+Dataset created
+
+↓
+
+Trigger matched
+
+↓
+
+Create workflow instance
+
+↓
+
+Dataset becomes Pending
+
+---
+
+### Ticket 7
+
+Reviewer task page
+
+"My pending approvals"
+
+Approve
+
+Reject
+
+---
+
+### Ticket 8
+
+Workflow progression
+
+Approve
+
+↓
+
+Next reviewer
+
+↓
+
+Publish if last step
+
+Reject
+
+↓
+
+Return to Draft
+
+---
+
+### Ticket 9
+
+Workflow dashboard
+
+Running
+
+Completed
+
+Rejected
+
+Pending
+
+---
+
+### Ticket 10
+
+Workflow details
+
+Current step
+
+History
+
+Assigned users
+
+---
+
+### Ticket 11
+
+Notifications
+
+Email
+
+(or even just CKAN notification)
+
+---
+
+### Ticket 12
+
+Timeouts
+
+Mark overdue
+
+Escalation
+
+---
+
+## One thing I would change from the architecture
+
+I **would not expose the workflow engine directly anywhere**.
+
+Instead I'd create something like
+
+```
+WorkflowService
+```
+
+Then internally
+
+```
+WorkflowService
+      │
+      ▼
+WorkflowEngineAdapter
+      │
+      ▼
+Camunda
+```
+
+Every controller talks only to
+
+```
+WorkflowService
+```
+
+Never to Camunda.
+
+If later we replace Camunda with Temporal or Flowable, only the adapter changes.
+
+---
+
+I also wouldn't make tickets like **"Implement Camunda"** or **"Implement Flowable"**. I'd keep them technology-agnostic:
+
+* Create Workflow Engine Adapter
+* Implement Workflow Service
+* Start Workflow on Dataset Event
+
+This keeps the backlog cleaner and lets you change the implementation later without rewriting Jira tickets. I think this also matches the architectural approach we discussed earlier.
+
+---
+
+Ok, in this case add an extra ticket in the beginning, where dev can investigate few workflow engines(recommend some examples), choose the one and briefly document how to integrate with it and which endpoints to use for future tasks
+
+---
+
+I think that's actually a very good first ticket. It reduces the risk of the rest of the implementation, and gives the developer freedom to pick the best fit before we start building the integration.
+
+I'd write it like this:
+
+---
+
+### **Title**
+
+Investigate workflow engine options and define integration approach
+
+### **Description**
+
+Investigate open-source workflow engines that can be used to execute dataset publication workflows. The investigation should focus on engines that provide REST APIs, support long-running workflows, task assignment, timers, approvals and workflow state management.
+
+Evaluate at least 3 workflow engines (for example Camunda, Flowable and Temporal) and select the most suitable option for the MVP implementation.
+
+Document the selected solution, how it integrates with CKAN, which API endpoints will be used by the application, and any limitations or assumptions that should be considered during implementation.
+
+The goal of this task is to establish a clear integration approach before implementing the workflow functionality.
+
+### **Acceptance criteria**
+
+1. Investigate at least three workflow engine solutions, for example:
+
+   * Camunda
+   * Flowable
+   * Temporal
+   * (optional) n8n or another suitable alternative if considered a better fit
+
+2. Document the pros and cons of each solution with respect to the project requirements, including:
+
+   * REST API availability
+   * workflow execution
+   * human approval tasks
+   * timers and escalations
+   * deployment complexity
+   * licensing considerations (if applicable)
+
+3. Select a workflow engine for the MVP and provide justification for the decision.
+
+4. Produce a short integration document describing:
+
+   * high-level architecture
+   * how CKAN communicates with the workflow engine
+   * authentication approach (if required)
+   * API endpoints expected to be used for:
+
+     * starting a workflow
+     * completing workflow tasks
+     * retrieving workflow status
+     * cancelling a workflow
+     * listing pending user tasks (if supported)
+
+5. Identify any additional components or CKAN services required to support the integration.
+
+6. Document any known limitations, assumptions or future improvements identified during the investigation.
+
+
+I like this ticket because after it's completed, every other ticket can simply say "Use the selected Workflow Engine Adapter" without caring whether the implementation is based on Camunda, Flowable, Temporal, or something else. It keeps the remaining backlog implementation-agnostic while still forcing an architectural decision upfront.
+
+---
+
+Good. Go forward with the rest of MVP tickets
+
+---
+
+I would keep the backlog around **11-12 tickets** total (including the investigation one). Each ticket should be small enough to complete within one working day and independently reviewable.
+
+---
+
+# Ticket 2
+
+### Title
+
+Create workflow engine adapter interface
+
+### Description
+
+Create a generic workflow engine adapter that abstracts communication between CKAN and the selected workflow engine.
+
+The adapter should expose a simple interface used by the rest of the application. No CKAN components should communicate directly with the workflow engine APIs.
+
+The implementation can initially contain placeholder methods where the functionality is implemented by later tasks.
+
+### Acceptance criteria
+
+1. Create a workflow adapter/service interface.
+2. Adapter provides methods for:
+
+   * start workflow
+   * complete task
+   * cancel workflow
+   * retrieve workflow status
+   * retrieve pending tasks
+3. No CKAN controllers or actions call the workflow engine directly.
+4. Adapter implementation can be easily replaced with another workflow engine.
+
+---
+
+# Ticket 3
+
+### Title
+
+Implement workflow configuration data model
+
+### Description
+
+Create the database models required to store workflow definitions inside CKAN.
+
+The model should support simple sequential workflows required for the MVP and allow future extension without major schema changes.
+
+### Acceptance criteria
+
+1. Database model created for workflow definitions.
+2. Workflow stores:
+
+   * workflow name
+   * description
+   * enabled/disabled status
+3. Workflow steps store:
+
+   * step order
+   * step name
+   * assigned CKAN role
+   * approval required
+4. Trigger configuration is supported for:
+
+   * dataset creation
+   * dataset type
+5. Database migrations are provided.
+
+---
+
+# Ticket 4
+
+### Title
+
+Implement workflow administration API
+
+### Description
+
+Implement internal actions/API for creating, updating, deleting and retrieving workflow definitions.
+
+The API will be used later by the administration UI.
+
+### Acceptance criteria
+
+1. Create workflow.
+2. Update workflow.
+3. Delete workflow.
+4. List workflows.
+5. Retrieve workflow details.
+6. Validation prevents invalid workflow definitions.
+
+---
+
+# Ticket 5
+
+### Title
+
+Develop workflow administration interface
+
+### Description
+
+Create a simple administration interface allowing Catalogue Admin to manage workflows.
+
+The interface only needs functionality required for the MVP and does not require drag-and-drop editing.
+
+### Acceptance criteria
+
+1. List configured workflows.
+2. Create workflow.
+3. Edit workflow.
+4. Delete workflow.
+5. Enable or disable workflow.
+6. Configure workflow name and description.
+
+---
+
+# Ticket 6
+
+### Title
+
+Implement workflow step configuration
+
+### Description
+
+Extend the workflow administration interface to allow configuring workflow steps.
+
+Each workflow consists of sequential approval steps assigned to CKAN roles.
+
+### Acceptance criteria
+
+1. Add workflow steps.
+2. Remove workflow steps.
+3. Change execution order.
+4. Configure:
+
+   * step name
+   * assigned CKAN role
+   * approval required
+5. Validation ensures at least one workflow step exists.
+
+---
+
+# Ticket 7
+
+### Title
+
+Implement workflow trigger evaluation
+
+### Description
+
+Implement logic that evaluates workflow triggers whenever a dataset is created.
+
+If a workflow matches the configured trigger, a new workflow instance should be started.
+
+### Acceptance criteria
+
+1. Workflow evaluation is executed during dataset creation.
+2. Trigger supports:
+
+   * all datasets
+   * dataset type
+3. Matching workflow is identified.
+4. Workflow instance is started through the workflow adapter.
+
+---
+
+# Ticket 8
+
+### Title
+
+Synchronize dataset state with workflow
+
+### Description
+
+Integrate dataset lifecycle with workflow execution.
+
+Datasets participating in a workflow should remain in Pending state until workflow completion.
+
+### Acceptance criteria
+
+1. Dataset entering workflow changes to Pending.
+2. Successful workflow publishes dataset.
+3. Rejected workflow returns dataset to Draft.
+4. Cancelled workflow returns dataset to Draft.
+5. Dataset state always reflects workflow status.
+
+---
+
+# Ticket 9
+
+### Title
+
+Implement workflow participant actions
+
+### Description
+
+Allow workflow participants to review assigned workflow tasks and submit approval decisions.
+
+### Acceptance criteria
+
+1. Display pending workflow tasks assigned to current user.
+2. User can approve task.
+3. User can reject task.
+4. Decision is sent to workflow engine through adapter.
+5. Workflow progresses according to returned workflow state.
+
+---
+
+# Ticket 10
+
+### Title
+
+Develop workflow monitoring dashboard
+
+### Description
+
+Create an administration dashboard displaying active workflow instances and their current status.
+
+The dashboard should provide enough information to monitor workflow execution during the demo.
+
+### Acceptance criteria
+
+1. List active workflow instances.
+2. Display:
+
+   * dataset
+   * workflow
+   * current step
+   * assigned role
+   * workflow status
+3. Display completed workflow instances.
+4. Allow opening workflow details.
+
+---
+
+# Ticket 11
+
+### Title
+
+Implement workflow details view
+
+### Description
+
+Create a detailed view for a workflow instance showing its execution progress.
+
+The page should help administrators troubleshoot workflow execution.
+
+### Acceptance criteria
+
+1. Display workflow definition.
+2. Display completed steps.
+3. Display current step.
+4. Display workflow status.
+5. Display approval history.
+6. Display timestamps for executed steps.
+
+---
+
+# Ticket 12
+
+### Title
+
+Implement basic notifications and workflow timeouts
+
+### Description
+
+Add minimal notification and timeout functionality required for the MVP demonstration.
+
+The implementation only needs to support a single timeout period and basic notification events.
+
+### Acceptance criteria
+
+1. Workflow step can define timeout duration.
+2. Overdue workflow steps are detected.
+3. Notification is generated when:
+
+   * workflow starts
+   * task is assigned
+   * workflow completes
+4. Overdue workflows are visible in the monitoring dashboard.
+5. Timeout handling is documented for future extension.
+
+---
+
+I like this breakdown because it naturally follows the implementation order:
+
+1. **Research** → choose engine.
+2. **Adapter** → define integration layer.
+3. **Persistence** → workflow definitions.
+4. **API** → backend CRUD.
+   5–6. **Admin UI** → configure workflows.
+   7–9. **Runtime** → trigger, execute, approve.
+   10–11. **Monitoring** → dashboards and details.
+5. **Notifications & timeouts** → polish for the demo.
+
+Each ticket is scoped to roughly **4–8 hours** of work, with clear dependencies but minimal overlap, making them suitable for incremental implementation and review.
+
+---
+
+I want to extend "Implement workflow step configuration" (but keep new requirements in the same ticket even though it will be bigger). I assume that separate step may require user's actions, like "provide license value". When user does it to dataset, he sort of pushes workflow further, maybe by clicking "done" button on workflow management page, and it moves to the next step. We need to include some simple stage management into ticket
+
+---
+
+I agree with adding it to the same ticket. In fact, I think it fits there better than creating a separate ticket, because it's still about **defining what a workflow step is**, not executing the workflow.
+
+I'd keep it simple for the MVP. Instead of introducing a full BPMN-style task model, each step can have a **type**, for example:
+
+* **Approval** – user approves/rejects.
+* **Manual action** – user performs some work in CKAN (e.g. updates metadata) and then clicks **Mark as complete**.
+* *(Optionally later)* Automatic – system performs an action and immediately continues.
+
+That would allow scenarios like:
+
+```
+Step 1
+Data Steward
+Manual action
+"Populate license information"
+
+↓
+
+User edits dataset
+
+↓
+
+Clicks "Mark as complete"
+
+↓
+
+Workflow moves to Step 2
+
+↓
+
+Metadata Reviewer
+Approval
+
+↓
+
+Approve
+
+↓
+
+Published
+```
+
+I would update the ticket like this:
+
+---
+
+## Title
+
+Implement workflow step configuration
+
+## Description
+
+Extend the workflow administration interface to allow configuring workflow steps.
+
+Each workflow consists of sequential steps assigned to CKAN roles. A step may require either an approval decision or completion of a manual task before the workflow continues.
+
+For the MVP, manual tasks will be completed by updating the dataset in CKAN and marking the workflow step as complete from the workflow page.
+
+## Acceptance criteria
+
+1. Add workflow steps.
+2. Remove workflow steps.
+3. Change execution order.
+4. Configure for each step:
+
+   * step name
+   * assigned CKAN role
+   * step type:
+
+     * Approval
+     * Manual task
+   * description/instructions displayed to the assigned user
+5. Validation ensures at least one workflow step exists.
+6. Manual task steps expose a **Mark as complete** action for the assigned user.
+7. Completing a manual task advances the workflow to the next configured step.
+8. Approval steps continue to require **Approve** or **Reject** actions before progressing.
+9. The configured step type and instructions are stored as part of the workflow definition.
+
+---
+
+I actually like this better because it makes the workflow much closer to the client's examples. Their requirements aren't only about approvals—they mention actions like reviewing metadata, updating information, and other human tasks. A generic **Manual task** step gives you enough flexibility to model things like "Provide license value", "Complete metadata", or "Verify resource links" without needing a different step type for each one. It's simple enough for an MVP but leaves room to add richer task types later.
+
+---

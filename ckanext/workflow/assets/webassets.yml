@@ -1,0 +1,14 @@
+scripts:
+  filter: rjsmin
+  output: ckanext-workflow/%(version)s-scripts.js
+  contents:
+    - steps.js
+  extra:
+    preload:
+      - base/main
+
+# css:
+#   filter: rcssmin
+#   output: ckanext-workflow/%(version)s-styles.css
+#   contents:
+#     - css/styles.css

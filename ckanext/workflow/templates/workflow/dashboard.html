@@ -1,0 +1,104 @@
+{% extends "page.html" %}
+
+{% block subtitle %}My Workflow Tasks{% endblock %}
+
+{% block primary %}
+  <article class="module">
+    <div class="module-content">
+      <div class="row" style="margin-bottom: 20px;">
+        <div class="col-md-12">
+          <h1>My Workflow Tasks</h1>
+          <p class="text-muted">Review publications and perform manual checklist tasks assigned to your role.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Active Tasks Column -->
+        <div class="col-md-8">
+          <div class="panel panel-default" style="border: 1px solid #ddd; border-radius: 4px; padding: 20px; margin-bottom: 20px; background-color: #ffffff;">
+            <h3 style="margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #337ab7; padding-bottom: 10px; color: #337ab7;">
+              <i class="fa fa-tasks"></i> Pending Tasks
+            </h3>
+
+            {% if tasks %}
+              <div class="list-group">
+                {% for item in tasks %}
+                  {% set task = item.task %}
+                  {% set pkg = item.package %}
+                  {% set inst = item.instance %}
+                  <div class="list-group-item" style="border: 1px solid #eee; margin-bottom: 15px; border-radius: 4px; padding: 15px; border-left: 5px solid {% if inst.status == 'overdue' %}#d9534f{% else %}#337ab7{% endif %}; background-color: #fafafa;">
+                    <div class="row">
+                      <div class="col-md-9">
+                        <h4 style="margin-top: 0; margin-bottom: 5px;">
+                          <a href="/dataset/{{ pkg.name }}" style="font-weight: bold; color: #337ab7;">
+                            {{ pkg.title or pkg.name }}
+                          </a>
+                          {% if inst.status == 'overdue' %}
+                            <span class="label label-danger" style="font-size: 10px; background-color: #d9534f; color: white; margin-left: 5px; padding: 2px 5px; border-radius: 3px;">OVERDUE</span>
+                          {% endif %}
+                        </h4>
+                        <p style="margin-bottom: 5px; font-size: 13px;">
+                          <strong>Workflow:</strong> {{ inst.workflow.name }} |
+                          <strong>Step:</strong> {{ task.name }}
+                        </p>
+                        <p style="margin-bottom: 10px; font-size: 13px; color: #555; background-color: #fff; padding: 8px; border: 1px solid #e3e3e3; border-radius: 4px; font-style: italic;">
+                          <strong>Instructions:</strong> {{ task.instructions or 'No instructions provided.' }}
+                        </p>
+                        <span class="label label-info" style="background-color: #5bc0de; color: white; padding: 3px 6px; font-size: 11px; border-radius: 3px;">
+                          Assigned Role: {{ task.assigned_role|upper }}
+                        </span>
+                      </div>
+                      <div class="col-md-3 text-right" style="text-align: right; padding-top: 15px;">
+                        <a href="/workflow/instance/{{ inst.id }}" class="btn btn-primary btn-sm" style="margin-bottom: 5px; width: 100%;">
+                          <i class="fa fa-check-square-o"></i> Execute Task
+                        </a>
+                        <a href="/dataset/{{ pkg.name }}" class="btn btn-default btn-sm" style="width: 100%;">
+                          <i class="fa fa-file-text-o"></i> View Dataset
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else: %}
+              <div class="alert alert-success" style="padding: 15px; border-left: 5px solid #28a745; background-color: #d4edda; color: #155724; border-radius: 4px;">
+                <i class="fa fa-check-circle"></i> Awesome! No pending tasks assigned to your role.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Notifications Column -->
+        <div class="col-md-4">
+          <div class="panel panel-default" style="border: 1px solid #ddd; border-radius: 4px; padding: 20px; background-color: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #5bc0de; padding-bottom: 10px;">
+              <h3 style="margin: 0; color: #31708f; font-size: 18px;">
+                <i class="fa fa-bell"></i> Notifications
+              </h3>
+              {% if notifications %}
+                <form action="/workflows/notifications/read" method="POST" style="margin: 0;">
+                  <button type="submit" class="btn btn-link btn-xs" style="color: #31708f; padding: 0; font-weight: bold; text-decoration: none;">
+                    Mark all read
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+
+            {% if notifications %}
+              <div style="max-height: 400px; overflow-y: auto;">
+                {% for notif in notifications %}
+                  <div style="padding: 10px; border-bottom: 1px solid #eee; font-size: 13px;">
+                    <div style="margin-bottom: 3px; font-weight: bold;">{{ notif.message }}</div>
+                    <small class="text-muted"><i class="fa fa-clock-o"></i> {{ notif.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else: %}
+              <p class="text-muted" style="padding: 10px 0; text-align: center; font-style: italic;">No unread notifications.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+{% endblock %}

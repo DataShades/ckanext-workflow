@@ -1,0 +1,6 @@
+{% ckan_extends %}
+
+{% block content_primary_nav %}
+    {{ super() }}
+    {{ ui.content_nav_item(_("Workflows"), href=h.url_for("workflow.list_definitions"), active=request.endpoint == "workflow.list_definitions", icon="route") if h.workflow_show_admin_tab() }}
+{% endblock %}

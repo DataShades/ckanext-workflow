@@ -1,0 +1,67 @@
+{% extends "workflow/admin/base.html" %}
+
+{%- block subtitle -%}
+    {{ ui.subtitle_item(_("Workflow Definitions")) }}
+    {{ super() }}
+{%- endblock %}
+
+{%- block breadcrumb_content_inner -%}
+    {{ super() }}
+    {{ ui.breadcrumb(_("Workflow Definitions"), href=h.url_for("workflow.list_definitions")) }}
+{%- endblock %}
+
+{% block secondary_content %}
+    {%- call ui.util.call(ui.sidebar_section, icon="info-circle", title=_('Workflow Definitions')) -%}
+        <p>{{ _("Manage publish workflows and their trigger conditions.") }}</p>
+    {%- endcall %}
+{% endblock %}
+
+{%- block page_primary_action -%}
+    {{ super() }}
+    {{ ui.page_action(_("Monitoring"), href=h.url_for("workflow.admin_dashboard"), icon="dashboard") }}
+    {{ ui.page_action(_("Create"), href=h.url_for("workflow.create_definition"), icon="add") }}
+{%- endblock %}
+
+{% block primary_content_inner %}
+
+    {% if workflows %}
+        {%- call ui.util.call(ui.table, striped=true) -%}
+            {{ ui.table_head(ui.table_row(ui.util.map(ui.table_cell, ["Name", "Description", "Triggers On", "Steps Count", "Status", "Actions"], header=true))) }}
+            {%- call ui.util.call(ui.table_body) -%}
+                {% for wf in workflows %}
+                    {%- set modal_id = ui.util.id(wf.id|string, prefix="modal-") -%}
+
+                    {{ ui.confirm_modal(_("Are you sure you want to delete this workflow?"), id=modal_id, href=h.url_for("workflow.delete_definition", workflow_id=wf.id)) }}
+
+                    <tr>
+                        {{ ui.table_cell(wf.name) }}
+                        {{ ui.table_cell(wf.description or ui.empty(_("No description"))) }}
+                        {{ ui.table_cell(ui.badge("{} ({})".format(wf.dataset_type, wf.trigger_type))) }}
+
+                        {%- set num_steps = wf.steps|length -%}
+                        {{ ui.table_cell(ungettext("{num} step", "{num} steps", num_steps).format(num=num_steps)) }}
+
+                        {{ ui.table_cell(_("Active") if wf.enabled else _("Disabled"), style="primary" if wf.enabled else "secondary") }}
+
+                        <td>
+                            {%- call ui.util.call(ui.button_group) -%}
+                                {{ ui.button(_("Visualize"), href=h.url_for("workflow.visualize_definition", workflow_id=wf.id), style="info", size="sm", icon="sitemap") }}
+
+                                {{ ui.button(_("Edit"), href=h.url_for("workflow.edit_definition", workflow_id=wf.id), size="sm", icon="edit") }}
+
+                                {{ ui.modal_handle(_("Delete"), id=modal_id, style="danger", size="sm", icon="trash") }}
+
+                            {%- endcall %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            {%- endcall %}
+        {%- endcall %}
+
+
+    {% else %}
+        {{ ui.empty(_('No workflow definitions found.')) }}
+
+    {% endif %}
+
+{% endblock %}

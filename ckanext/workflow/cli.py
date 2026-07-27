@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
+from __future__ import annotations
 
 import click
 
-
-def get_commands():
-    return [workflow]
+__all__ = ["workflow"]
 
 
-@click.group()
+@click.group(short_help="Workflow management")
 def workflow():
-    pass
+    """Workflow management commands."""

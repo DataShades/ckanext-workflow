@@ -1,0 +1,74 @@
+{% extends "workflow/admin/base.html" %}
+
+{% block subtitle %}
+    {{ ui.subtitle_item(_("Visualize")) }}
+    {{ super() }}
+{% endblock %}
+
+
+{% block secondary_content %}
+    {%- call ui.util.call(ui.sidebar_section, icon="info-circle", title=_('Flow Details')) -%}
+        {%- call ui.util.call(ui.list) -%}
+            {%- call ui.util.call(ui.list_item) -%}
+                <strong>{{ _("Trigger Type:") }}</strong> {{ workflow.trigger_type }}
+            {%- endcall %}
+            {%- call ui.util.call(ui.list_item) -%}
+                <strong>{{ _("Dataset Trigger:") }}</strong> {{ workflow.dataset_type }}
+            {%- endcall %}
+            {%- call ui.util.call(ui.list_item) -%}
+                {%- with num=workflow.steps|length -%}
+                    <strong>{{ _("Total Steps:") }}</strong> {{ ungettext("{num} step", "{num} steps", num).format(num=num) }}
+                {%- endwith %}
+            {%- endcall %}
+        {%- endcall %}
+
+        {{ ui.divider() }}
+
+        {{ ui.heading(_("Legend"), level=4) }}
+
+        {%- call ui.util.call(ui.list) -%}
+            {%- call ui.util.call(ui.list_item) -%}
+                <span style="display: inline-block; width: 15px; height: 15px; background: #e2f0d9; border: 2px solid #28a745; border-radius: 50%; vertical-align: middle; margin-right: 5px;"></span>
+                <span>Start / End State</span>
+            {%- endcall %}
+            {%- call ui.util.call(ui.list_item) -%}
+                <span style="display: inline-block; width: 15px; height: 15px; background: #fff; border: 2px solid #337ab7; border-radius: 4px; vertical-align: middle; margin-right: 5px;"></span>
+                <span>Human Step (Approval / Manual)</span>
+            {%- endcall %}
+            {%- call ui.util.call(ui.list_item) -%}
+                <span style="display: inline-block; width: 15px; height: 15px; background: #fff; border: 2px solid #17a2b8; border-radius: 4px; vertical-align: middle; margin-right: 5px;"></span>
+                <span>Automated Step</span>
+            {%- endcall %}
+            {%- call ui.util.call(ui.list_item) -%}
+                <span style="display: inline-block; width: 15px; height: 15px; background: #f8d7da; border: 2px solid #dc3545; border-radius: 50%; vertical-align: middle; margin-right: 5px;"></span>
+                <span>Rejection State (Draft)</span>
+            {%- endcall %}
+        {%- endcall %}
+    {%- endcall %}
+{% endblock %}
+
+{% block primary_content_inner %}
+    {%- call ui.util.call(ui.card, title=workflow.name) -%}
+        <p>{{ workflow.description or 'No description provided.' }}</p>
+
+        <div class="mermaid" style="width: 100%; text-align: center;">
+            {{ chart_code }}
+        </div>
+    {%- endcall %}
+{% endblock %}
+
+
+{%- block scripts -%}
+    {{ super() }}
+    <script>
+     document.addEventListener("DOMContentLoaded", () => mermaid.initialize({
+         startOnLoad: true,
+         theme: 'default',
+         flowchart: {
+             useMaxWidth: true,
+             htmlLabels: true,
+             curve: 'basis'
+         }
+     }));
+    </script>
+{%- endblock %}

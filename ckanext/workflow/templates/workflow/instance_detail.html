@@ -1,0 +1,209 @@
+{% extends "page.html" %}
+
+{% block subtitle %}Workflow Progress - {{ package.title or package.name }}{% endblock %}
+
+{% block primary %}
+  <article class="module">
+    <div class="module-content">
+      <div style="margin-bottom: 20px;">
+        <a href="/workflows/my-tasks" class="btn btn-default"><i class="fa fa-arrow-left"></i> My Tasks</a>
+        {% if h.workflow_user_has_role(c.user, None, 'sysadmin') %}
+          <a href="/admin/workflows/dashboard" class="btn btn-default"><i class="fa fa-dashboard"></i> Monitoring Dashboard</a>
+        {% endif %}
+        <h1 style="margin-top: 15px;">Workflow Progress: {{ package.title or package.name }}</h1>
+        <p class="text-muted">Workflow definition: <strong>{{ instance.workflow.name }}</strong></p>
+      </div>
+
+      <div class="row">
+        <!-- Timeline column -->
+        <div class="col-md-7">
+          <div class="panel panel-default" style="border: 1px solid #ddd; border-radius: 4px; padding: 20px; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Workflow Sequence</h3>
+
+            <div class="workflow-timeline" style="position: relative; padding-left: 30px; margin-top: 10px;">
+              <div class="timeline-line" style="position: absolute; left: 15px; top: 10px; bottom: 10px; width: 2px; background-color: #ddd;"></div>
+
+              {% for task in instance.tasks %}
+                {% set is_current = (task.sequence == instance.current_step_index and instance.status in ['active', 'overdue']) %}
+                {% set is_completed = (task.status == 'completed') %}
+                {% set is_rejected = (task.status == 'rejected') %}
+                {% set is_future = (task.sequence > instance.current_step_index or instance.status in ['completed', 'rejected', 'cancelled']) %}
+
+                <div class="timeline-item" style="position: relative; margin-bottom: 30px;">
+                  <!-- Bullet marker -->
+                  <div class="timeline-bullet" style="position: absolute; left: -25px; top: 0; width: 22px; height: 22px; border-radius: 50%; border: 2px solid; background-color: white; z-index: 1; text-align: center; line-height: 18px; font-size: 11px; font-weight: bold;
+                    {% if is_completed %}
+                      border-color: #28a745; color: #28a745; background-color: #d4edda;
+                    {% elif is_rejected %}
+                      border-color: #dc3545; color: #dc3545; background-color: #f8d7da;
+                    {% elif is_current %}
+                      border-color: #007bff; color: #007bff; background-color: #cce5ff; box-shadow: 0 0 8px rgba(0,123,255,0.5);
+                    {% else %}
+                      border-color: #aaa; color: #aaa;
+                    {% endif %}">
+                    {% if is_completed %}✓{% elif is_rejected %}✗{% else %}{{ task.sequence + 1 }}{% endif %}
+                  </div>
+
+                  <!-- Timeline Content -->
+                  <div style="padding-left: 10px;">
+                    <h4 style="margin-top: 0; margin-bottom: 5px; font-weight: bold;
+                      {% if is_completed %}color: #28a745;{% elif is_rejected %}color: #dc3545;{% elif is_current %}color: #007bff;{% else %}color: #555;{% endif %}">
+                      {{ task.name }}
+                      {% if is_current %}
+                        <span class="label label-primary" style="font-size: 10px; background-color: #007bff; color: white; padding: 2px 5px; border-radius: 3px; margin-left: 5px;">CURRENT</span>
+                        {% if instance.status == 'overdue' %}
+                          <span class="label label-danger" style="font-size: 10px; background-color: #dc3545; color: white; padding: 2px 5px; border-radius: 3px; margin-left: 5px;">OVERDUE</span>
+                        {% endif %}
+                      {% endif %}
+                    </h4>
+
+                    <p style="margin-bottom: 5px; font-size: 12px;">
+                      <strong>Assignee:</strong> Role "{{ task.assigned_role|upper }}" |
+                      <strong>Type:</strong> {{ task.step_type|upper }}
+                    </p>
+
+                    {% if task.instructions and not is_future %}
+                      <p style="font-size: 12px; font-style: italic; color: #666; background-color: #fcfcfc; padding: 8px; border: 1px solid #f0f0f0; border-radius: 4px;">
+                        {{ task.instructions }}
+                      </p>
+                    {% endif %}
+
+                    {% if is_completed or is_rejected %}
+                      <div class="well well-sm" style="margin-bottom: 0; padding: 8px 12px; background-color: #f9f9f9; border: 1px solid #e3e3e3; font-size: 12px; margin-top: 5px; border-radius: 4px;">
+                        <strong>Action by:</strong> {{ task.completed_by }} |
+                        <strong>Date:</strong> {{ task.completed_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% if task.comments %}
+                          <br><strong>Comment:</strong> {{ task.comments }}
+                        {% endif %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Action / Details column -->
+        <div class="col-md-5">
+          <!-- Status card -->
+          <div class="panel panel-default" style="border: 1px solid #ddd; border-radius: 4px; padding: 20px; margin-bottom: 20px; background-color: #fafafa;">
+            <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Workflow Status</h3>
+            <div style="font-size: 15px; margin-bottom: 15px;">
+              <strong>Status:</strong>
+              {% if instance.status == 'active' %}
+                <span class="label label-primary" style="background-color: #007bff; color: white; padding: 3px 6px; border-radius: 3px;">Active</span>
+              {% elif instance.status == 'overdue' %}
+                <span class="label label-danger" style="background-color: #dc3545; color: white; padding: 3px 6px; border-radius: 3px;">Overdue</span>
+              {% elif instance.status == 'completed' %}
+                <span class="label label-success" style="background-color: #28a745; color: white; padding: 3px 6px; border-radius: 3px;">Completed & Published</span>
+              {% elif instance.status == 'rejected' %}
+                <span class="label label-danger" style="background-color: #dc3545; color: white; padding: 3px 6px; border-radius: 3px;">Rejected</span>
+              {% elif instance.status == 'cancelled' %}
+                <span class="label label-warning" style="background-color: #ffc107; color: black; padding: 3px 6px; border-radius: 3px;">Cancelled</span>
+              {% endif %}
+            </div>
+            <div style="font-size: 13px; margin-bottom: 10px;">
+              <strong>Started At:</strong> {{ instance.started_at.strftime('%Y-%m-%d %H:%M') }}
+            </div>
+            <div style="font-size: 13px; margin-bottom: 20px;">
+              <strong>Last Update:</strong> {{ instance.updated_at.strftime('%Y-%m-%d %H:%M') }}
+            </div>
+
+            {% if instance.status in ['active', 'overdue'] %}
+              <form action="/workflow/instance/{{ instance.id }}/cancel" method="POST" onsubmit="return confirm('Are you sure you want to cancel this workflow?');">
+                <button type="submit" class="btn btn-warning btn-sm btn-block" style="width: 100%;">
+                  <i class="fa fa-ban"></i> Cancel Workflow
+                </button>
+              </form>
+            {% endif %}
+          </div>
+
+          <!-- Execution Card -->
+          {% if can_act and current_task %}
+            <div class="panel panel-primary" style="border-color: #337ab7; border-radius: 4px; padding: 20px; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+              <h3 style="margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #337ab7; padding-bottom: 10px; color: #337ab7;">
+                <i class="fa fa-pencil-square-o"></i> Perform Task
+              </h3>
+
+              <div style="margin-bottom: 15px; font-size: 13px;">
+                <strong>Step Name:</strong> {{ current_task.name }}
+                <br>
+                <strong>Step Type:</strong> {{ current_task.step_type|upper }}
+              </div>
+
+              {% if current_task.step_type == 'manual_task' %}
+                <div class="alert alert-info" style="font-size: 12px; padding: 10px; border-left: 4px solid #31708f; margin-bottom: 15px; background-color: #d9edf7; color: #31708f;">
+                  <i class="fa fa-info-circle"></i> <strong>Instructions:</strong> Please update the dataset in CKAN (e.g. fill in missing metadata, check resources, license) before marking this step complete.
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                  <a href="/dataset/edit/{{ package.name }}" class="btn btn-default btn-sm btn-block" target="_blank" style="width: 100%;">
+                    <i class="fa fa-edit"></i> Edit Dataset in New Tab
+                  </a>
+                </div>
+              {% endif %}
+
+              <form action="/workflow/task/{{ instance.id }}/{{ current_task.sequence }}/action" method="POST">
+                <div class="form-group" style="margin-bottom: 15px;">
+                  <label for="comment-field" style="font-weight: bold; font-size: 13px;">Comments / Notes</label>
+                  <textarea id="comment-field" name="comment" placeholder="Add optional details about your decision..." class="form-control" rows="3" style="width: 100%; border: 1px solid #ccc; padding: 8px; border-radius: 4px;"></textarea>
+                </div>
+
+                {% if current_task.step_type == 'approval' %}
+                  <div style="display: flex; gap: 10px;">
+                    <button type="submit" name="action_type" value="approve" class="btn btn-success" style="flex: 1; padding: 10px; font-weight: bold;">
+                      <i class="fa fa-check"></i> Approve
+                    </button>
+                    <button type="submit" name="action_type" value="reject" class="btn btn-danger" style="flex: 1; padding: 10px; font-weight: bold;">
+                      <i class="fa fa-times"></i> Reject
+                    </button>
+                  </div>
+                {% else %}
+                  <button type="submit" name="action_type" value="complete" class="btn btn-success btn-block" style="width: 100%; padding: 10px; font-weight: bold;">
+                    <i class="fa fa-check-circle"></i> Mark as Complete
+                  </button>
+                {% endif %}
+              </form>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Mermaid Flowchart Visualization Card -->
+      {% if chart_code %}
+        <div class="row" style="margin-top: 20px;">
+          <div class="col-md-12">
+            <div class="panel panel-default" style="border: 1px solid #ddd; border-radius: 4px; padding: 20px; background-color: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+              <h3 style="margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; color: #337ab7;">
+                <i class="fa fa-sitemap"></i> Workflow Progress Visualizer
+              </h3>
+
+              <div style="display: flex; justify-content: center; align-items: center; padding: 20px; background: #fafafa; border: 1px solid #eee; border-radius: 4px; overflow-x: auto;">
+                <div class="mermaid" style="width: 100%; text-align: center;">
+                  {{ chart_code }}
+                </div>
+              </div>
+              <p class="text-muted" style="margin-top: 10px; font-size: 12px; font-style: italic;">
+                * The step highlighted in blue represents the current active task.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+        <script type="text/javascript">
+          mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+              useMaxWidth: true,
+              htmlLabels: true,
+              curve: 'basis'
+            }
+          });
+        </script>
+      {% endif %}
+    </div>
+  </article>
+{% endblock %}

@@ -1,0 +1,7 @@
+version: 1
+groups:
+  - annotation: ckanext-workflow
+    options:
+      - key: ckanext.workflow.ui.show_admin_tab
+        type: bool
+        description: Display the tab for workflows in the CKAN Admin UI.

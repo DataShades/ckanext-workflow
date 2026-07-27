@@ -1,61 +1,48 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
-import ckantoolkit as tk
+from typing import Any
+
+from typing_extensions import override
 
 import ckan.plugins as p
+import ckan.plugins.toolkit as tk
+from ckan import types
+from ckan.common import CKANConfig
 
-from ckan.lib.plugins import DefaultPermissionLabels
-
-
-from ckanext.workflow.logic import action, auth
-
-from ckanext.workflow import helpers, interface, states
-
-
-class WorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
-    p.implements(p.ITemplateHelpers)
-    p.implements(p.IAuthFunctions)
-    p.implements(p.IActions)
-    p.implements(p.IPermissionLabels, inherit=True)
-
-    # ITemplateHelpers
-
-    def get_helpers(self):
-        return helpers.get_helpers()
-
-    # IAuthFunctions
-
-    def get_auth_functions(self):
-        return auth.get_auth_functions()
-
-    # IActions
-
-    def get_actions(self):
-        return action.get_actions()
-
-    # IPermissionLabels
-
-    def get_dataset_labels(self, dataset_obj):
-        state = tk.h.workflow_get_state(dataset_obj.as_dict())
-        labels = super(WorkflowPlugin, self).get_dataset_labels(dataset_obj)
-        if state:
-            labels = state.get_dataset_permission_labels(labels)
-        return labels
-
-    def get_user_dataset_labels(self, user_obj):
-        labels = super(WorkflowPlugin, self).get_user_dataset_labels(user_obj)
-        for plugin in p.PluginImplementations(interface.IWorkflow):
-            labels = plugin.get_user_permission_labels(user_obj, labels)
-        return labels
+from ckanext.workflow.service import WorkflowService
+from ckanext.theming.plugin import ThemingMixin
 
 
-class NativeWorkflowPlugin(p.SingletonPlugin, DefaultPermissionLabels):
-    p.implements(interface.IWorkflow, inherit=True)
+@tk.blanket.cli
+@tk.blanket.helpers
+@tk.blanket.actions
+@tk.blanket.auth_functions
+@tk.blanket.blueprints
+@tk.blanket.config_declarations
+class WorkflowPlugin(ThemingMixin, p.IPackageController, p.IConfigurer, p.SingletonPlugin):
+    # IConfigurer
+    @override
+    def update_config(self, config: CKANConfig) -> None:
+        super().update_config(config)
+        tk.add_template_directory(config, "templates")
+        tk.add_resource("assets", "workflow")
 
-    # IWorkflow
+    # IPackageController
+    @override
+    def after_dataset_create(self, context: types.Context, pkg_dict: dict[str, Any]) -> None:
+        if context.get("ignore_workflow") or context.get("ignore_auth"):
+            return
+        # Start workflow for new dataset
+        WorkflowService.start_workflow(pkg_dict)
 
-    def get_state_for_package(self, pkg_dict):
-        private = pkg_dict.get("private", True)
-        State = states.PrivateState if private else states.PublicState
-        return State(pkg_dict)
+    @override
+    def after_dataset_update(self, context: types.Context, pkg_dict: dict[str, Any]) -> None:
+        if context.get("ignore_workflow") or context.get("ignore_auth"):
+            return
+
+        # If there's an active workflow for this package, keep its state draft
+        inst = WorkflowService.get_instance_for_package(pkg_dict["id"])
+        user = tk.get_action("get_site_user")({"ignore_auth": True}, {})
+        if inst and pkg_dict.get("state") == "active":
+            context_sys = types.Context(ignore_auth=True, user=user["name"])
+            tk.get_action("package_patch")(context_sys, {"id": pkg_dict["id"], "state": "draft"})
