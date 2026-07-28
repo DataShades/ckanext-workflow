@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import json
-from flask import Blueprint, request, url_for, redirect
+from flask import Blueprint, request
 from flask.views import MethodView
 import ckan.plugins.toolkit as tk
 from ckanext.workflow.service import user_has_role
@@ -218,7 +217,7 @@ class CreateDefinition(MethodView):
                 "steps": steps_data,
             }
         )
-        return redirect(url_for("workflow.list_definitions"))
+        return tk.redirect_to(tk.url_for("workflow.list_definitions"))
 
 
 blueprint.add_url_rule("/ckan-admin/workflow/new", view_func=CreateDefinition.as_view("create_definition"))
@@ -253,7 +252,7 @@ def edit_definition(workflow_id):
                 "steps": steps_data,
             }
         )
-        return redirect(url_for("workflow.list_definitions"))
+        return tk.redirect_to(tk.url_for("workflow.list_definitions"))
 
     # GET method
     try:
@@ -283,7 +282,7 @@ def delete_definition(workflow_id):
         tk.abort(403, "Not authorized")
 
     tk.get_action("workflow_definition_delete")(context, {"id": workflow_id})
-    return redirect(url_for("workflow.list_definitions"))
+    return tk.redirect_to(tk.url_for("workflow.list_definitions"))
 
 
 @blueprint.route("/ckan-admin/workflows/dashboard")
@@ -331,7 +330,7 @@ def user_dashboard():
 
 def generate_mermaid_chart(workflow, active_step_index=None):
     lines = ["graph TD", "    Start([Start: Dataset Created])"]
-    
+
     if isinstance(workflow, dict):
         steps = workflow.get("steps", [])
     else:
@@ -351,7 +350,7 @@ def generate_mermaid_chart(workflow, active_step_index=None):
 
     for i, step in enumerate(steps):
         is_last = i == len(steps) - 1
-        
+
         if isinstance(step, dict):
             step_name = step.get("name")
             step_type = step.get("step_type", "")
@@ -459,7 +458,7 @@ def task_action(instance_id, sequence):
     else:
         tk.h.flash_error(f"Failed to complete task action: {msg}")
 
-    return redirect(url_for("workflow.user_dashboard"))
+    return tk.redirect_to(tk.url_for("workflow.user_dashboard"))
 
 
 @blueprint.route("/workflow/instance/<string:instance_id>/cancel", methods=["POST"])
@@ -480,7 +479,7 @@ def cancel_workflow(instance_id):
     else:
         tk.h.flash_error(msg)
 
-    return redirect(url_for("workflow.user_dashboard"))
+    return tk.redirect_to(tk.url_for("workflow.user_dashboard"))
 
 
 @blueprint.route("/workflows/notifications/read", methods=["POST"])
@@ -491,7 +490,7 @@ def mark_read():
         tk.get_action("workflow_user_notification_mark_read")(context, {})
     except Exception:
         pass
-    return redirect(url_for("workflow.user_dashboard"))
+    return tk.redirect_to(tk.url_for("workflow.user_dashboard"))
 
 
 @blueprint.route("/ckan-admin/workflow/<int:workflow_id>/visualize")
