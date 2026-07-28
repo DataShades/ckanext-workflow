@@ -13,81 +13,11 @@
 
 
 {% block primary_content_inner %}
-    {% set steps_json_list = [] %}
-    {% if workflow and workflow.steps %}
-        {% for step in workflow.steps %}
-            {% set ns = namespace(
-                approve_field="", approve_val="", approve_notif_target="", approve_notif_msg="",
-                reject_field="", reject_val="", reject_notif_target="", reject_notif_msg="",
-                complete_field="", complete_val="", complete_notif_target="", complete_notif_msg="",
-                success_field="", success_val="", success_notif_target="", success_notif_msg="",
-                failure_field="", failure_val="", failure_notif_target="", failure_notif_msg=""
-            ) %}
 
-            {% if step.parsed_actions %}
-                {% if step.parsed_actions.on_approve %}
-                    {% for act in step.parsed_actions.on_approve %}
-                        {% if act.type == 'change_field' %}{% set ns.approve_field = act.field %}{% set ns.approve_val = act.value %}
-                        {% elif act.type == 'send_notification' %}{% set ns.approve_notif_target = act.recipient %}{% set ns.approve_notif_msg = act.message %}{% endif %}
-                    {% endfor %}
-                {% endif %}
-                {% if step.parsed_actions.on_reject %}
-                    {% for act in step.parsed_actions.on_reject %}
-                        {% if act.type == 'change_field' %}{% set ns.reject_field = act.field %}{% set ns.reject_val = act.value %}
-                        {% elif act.type == 'send_notification' %}{% set ns.reject_notif_target = act.recipient %}{% set ns.reject_notif_msg = act.message %}{% endif %}
-                    {% endfor %}
-                {% endif %}
-                {% if step.parsed_actions.on_complete %}
-                    {% for act in step.parsed_actions.on_complete %}
-                        {% if act.type == 'change_field' %}{% set ns.complete_field = act.field %}{% set ns.complete_val = act.value %}
-                        {% elif act.type == 'send_notification' %}{% set ns.complete_notif_target = act.recipient %}{% set ns.complete_notif_msg = act.message %}{% endif %}
-                    {% endfor %}
-                {% endif %}
-                {% if step.parsed_actions.on_success %}
-                    {% for act in step.parsed_actions.on_success %}
-                        {% if act.type == 'change_field' %}{% set ns.success_field = act.field %}{% set ns.success_val = act.value %}
-                        {% elif act.type == 'send_notification' %}{% set ns.success_notif_target = act.recipient %}{% set ns.success_notif_msg = act.message %}{% endif %}
-                    {% endfor %}
-                {% endif %}
-                {% if step.parsed_actions.on_failure %}
-                    {% for act in step.parsed_actions.on_failure %}
-                        {% if act.type == 'change_field' %}{% set ns.failure_field = act.field %}{% set ns.failure_val = act.value %}
-                        {% elif act.type == 'send_notification' %}{% set ns.failure_notif_target = act.recipient %}{% set ns.failure_notif_msg = act.message %}{% endif %}
-                    {% endfor %}
-                {% endif %}
-            {% endif %}
+    {%- call ui.util.call(ui.form, method="POST", attrs={"x-data": "workflowSteps({ steps: " ~ (workflow.steps|default([])|tojson) ~ " })"}) -%}
 
-            {% set _ = steps_json_list.append({
-                "name": step.name,
-                "assigned_role": step.assigned_role,
-                "step_type": step.step_type,
-                "instructions": step.instructions or "",
-                "show_actions": false,
-                "approve_field": ns.approve_field,
-                "approve_val": ns.approve_val,
-                "approve_notif_target": ns.approve_notif_target,
-                "approve_notif_msg": ns.approve_notif_msg,
-                "reject_field": ns.reject_field,
-                "reject_val": ns.reject_val,
-                "reject_notif_target": ns.reject_notif_target,
-                "reject_notif_msg": ns.reject_notif_msg,
-                "complete_field": ns.complete_field,
-                "complete_val": ns.complete_val,
-                "complete_notif_target": ns.complete_notif_target,
-                "complete_notif_msg": ns.complete_notif_msg,
-                "success_field": ns.success_field,
-                "success_val": ns.success_val,
-                "success_notif_target": ns.success_notif_target,
-                "success_notif_msg": ns.success_notif_msg,
-                "failure_field": ns.failure_field,
-                "failure_val": ns.failure_val,
-                "failure_notif_target": ns.failure_notif_target,
-                "failure_notif_msg": ns.failure_notif_msg
-            }) %}
-        {% endfor %}
-    {% endif %}
+        {{ ui.form_errors(error_summary) }}
 
-    {%- call ui.util.call(ui.form, method="POST", attrs={"x-data": "workflowSteps({ steps: " ~ (steps_json_list|tojson) ~ " })"}) -%}
         {%- call ui.util.call(ui.accordion_wrapper) -%}
 
             {%- call ui.util.call(ui.accordion, title=_("General Info"), open=true) -%}
@@ -98,7 +28,7 @@
 
                 {{ ui.select(name="dataset_type", label=_("Dataset Type Trigger"), nested_content=_("Select dataset types compatible with this workflow."), selected=workflow.dataset_type, options=[{"value": "", "text": _("Any type")}, {"value": "dataset", "text": _("Dataset")}]) if 0 }}
 
-                {{ ui.checkbox(name="enabled", label=_("Enable this workflow"), checked=workflow.enabled) }}
+                {{ ui.checkbox(name="enabled", label=_("Enable this workflow"), checked=workflow.enabled, value="true") }}
             {%- endcall %}
 
             {%- call ui.util.call(ui.accordion, title=_("Steps Sequence"), open=true) -%}
@@ -118,70 +48,20 @@
                             <tr>
                                 <td class="step-idx"></td>
                                 <td>
-                                    {{ ui.input(label=_("Name"), name='step_name[]', attrs={"x-model": "step.name"}, required=true) }}
+                                    {{ ui.input(label=_("Name"), attrs={"x-bind:name": "`steps__${index}__name`", "x-model": "step.name"}, required=true) }}
                                 </td>
                                 <td>
-                                    {{ ui.select(name="step_role[]", label=_("Role"), attrs={"x-model": "step.assigned_role"}, options=[{"text": _("Member"), "value": "member"}, {"text": _("Editor"), "value": "editor"}, {"text": _("Admin"), "value": "admin"}]) }}
+                                    {{ ui.select(label=_("Role"), attrs={"x-bind:name": "`steps__${index}__assigned_role`", "x-model": "step.assigned_role"}, options=[{"text": _("Member"), "value": "member"}, {"text": _("Editor"), "value": "editor"}, {"text": _("Admin"), "value": "admin"}]) }}
                                 </td>
                                 <td>
-                                    {{ ui.select(name="step_type[]", label=_("Type"), attrs={"x-model": "step.step_type"}, options=[{"text": _("Approval"), "value": "approval"}, {"text": _("Manual Task"), "value": "manual_task"}, {"text": _("Automated Task"), "value": "automated_task"}]) }}
+                                    {{ ui.select(label=_("Type"), attrs={"x-bind:name": "`steps__${index}__step_type`", "x-model": "step.step_type"}, options=[{"text": _("Approval"), "value": "approval"}, {"text": _("Manual Task"), "value": "manual_task"}, {"text": _("Automated Task"), "value": "automated_task"}]) }}
                                 </td>
                                 <td>
-                                    {{ ui.input(label=_("Instructions"), name='step_instructions[]', attrs={"x-model": "step.instructions"}, placeholder="e.g. Please fill license or fail on keyword") }}
-
-                                    {%- call ui.util.call(ui.card, title=_("Post-Actions Configuration"), attrs={"x-show": "step.show_actions"}) -%}
-
-                                        <div x-show="step.step_type === 'approval'">
-                                            <fieldset>
-                                                <legend>ON APPROVAL</legend>
-                                                {{ ui.input(label=_("Field"), name="step_approve_field[]", placeholder="Change Dataset Field (e.g. license_id)", attrs={"x-model": "step.approve_field"}) }}
-                                                {{ ui.input(label=_("Value"), name="step_approve_val[]", placeholder="New Value (e.g. cc-by)", attrs={"x-model": "step.approve_val"}) }}
-                                                {{ ui.input(label=_("Notification Recipient"), name="step_approve_notif_target[]", placeholder="Notify Recipient (owner/admin/editor/member)", attrs={"x-model": "step.approve_notif_target"}) }}
-                                                {{ ui.input(label=_("Notification"), name="step_approve_notif_msg[]", placeholder="Notification Message", attrs={"x-model": "step.approve_notif_msg"}) }}
-                                            </fieldset>
-
-                                            <fieldset>
-                                                <legend>ON REJECTION</legend>
-                                                {{ ui.input(label=_("Field"), name="step_reject_field[]", attrs={"x-model": "step.reject_field"},placeholder="Change Dataset Field") }}
-                                                {{ ui.input(label=_("Value"), name="step_reject_val[]", attrs={"x-model": "step.reject_val"},placeholder="New Value") }}
-                                                {{ ui.input(label=_("Notification Recipient"), name="step_reject_notif_target[]", attrs={"x-model": "step.reject_notif_target"},placeholder="Notify Recipient (owner/admin)") }}
-                                                {{ ui.input(label=_("Notification"), name="step_reject_notif_msg[]", attrs={"x-model": "step.reject_notif_msg"},placeholder="Notification Message") }}
-                                            </fieldset>
-                                        </div>
-
-                                        <div  x-show="step.step_type === 'manual_task'">
-                                            <fieldset>
-                                                <legend>ON COMPLETE</legend>
-                                                {{ ui.input(label=_("Field"), name="step_complete_field[]", attrs={"x-model": "step.complete_field"},placeholder="Change Dataset Field") }}
-                                                {{ ui.input(label=_("Value"), name="step_complete_val[]", attrs={"x-model": "step.complete_val"},placeholder="New Value") }}
-                                                {{ ui.input(label=_("Notification Recipient"), name="step_complete_notif_target[]", attrs={"x-model": "step.complete_notif_target"},placeholder="Notify Recipient") }}
-                                                {{ ui.input(label=_("Notification"), name="step_complete_notif_msg[]", attrs={"x-model": "step.complete_notif_msg"},placeholder="Notification Message") }}
-
-                                            </fieldset>
-                                        </div>
-
-                                        <div x-show="step.step_type === 'automated_task'">
-                                            <fieldset>
-                                                <legend>ON SUCCESS</legend>
-                                                {{ ui.input(label=_("Field"), name="step_success_field[]", attrs={"x-model": "step.success_field"},placeholder="Change Dataset Field") }}
-                                                {{ ui.input(label=_("Value"), name="step_success_val[]", attrs={"x-model": "step.success_val"},placeholder="New Value") }}
-                                                {{ ui.input(label=_("Notification Recipient"), name="step_success_notif_target[]", attrs={"x-model": "step.success_notif_target"},placeholder="Notify Recipient") }}
-                                                {{ ui.input(label=_("Notification"), name="step_success_notif_msg[]", attrs={"x-model": "step.success_notif_msg"},placeholder="Notification Message") }}
-                                            </fieldset>
-                                            <fieldset>
-                                                <legend>ON FAILURE</legend>
-                                                {{ ui.input(label=_("Field"), name="step_failure_field[]", attrs={"x-model": "step.failure_field"},placeholder="Change Dataset Field") }}
-                                                {{ ui.input(label=_("Value"), name="step_failure_val[]", attrs={"x-model": "step.failure_val"},placeholder="New Value") }}
-                                                {{ ui.input(label=_("Notification Recipient"), name="step_failure_notif_target[]", attrs={"x-model": "step.failure_notif_target"}, placeholder="Notify Recipient") }}
-                                                {{ ui.input(label=_("Notification"), name="step_failure_notif_msg[]", attrs={"x-model": "step.failure_notif_msg"}, placeholder="Notification Message") }}
-                                            </fieldset>
-                                        </div>
-                                    {%- endcall %}
+                                    {{ ui.input(label=_("Instructions"), attrs={"x-bind:name": "`steps__${index}__instructions`", "x-model": "step.instructions"}, placeholder="e.g. Please fill license or fail on keyword") }}
 
                                 </td>
                                 <td style="text-align: center; vertical-align: middle;">
                                     {%- call ui.util.call(ui.button_group) -%}
-                                        {{ ui.button(_("Hooks"), size="sm", icon="cog", attrs={"x-on:click": "toggleActions(index)"}) }}
                                         {{ ui.button(size="sm", icon="trash", style="danger", attrs={"x-on:click": "removeStep(index)"}) }}
                                     {%- endcall %}
                                 </td>
@@ -191,9 +71,7 @@
                 {%- endcall %}
 
 
-                <div style="margin-top: 15px;">
-                    {{ ui.button(_("Add Step"), icon="add", attrs={"@click": "addStep()"}) }}
-                </div>
+                {{ ui.button(_("Add Step"), icon="add", attrs={"@click": "addStep()"}) }}
 
             {%- endcall %}
 
@@ -211,12 +89,17 @@
     <style>
      #steps-table {
          counter-reset: workflow-steps-sequence;
-         .step-idx:before {
-             counter-increment: workflow-steps-sequence;
-             content: counter(workflow-steps-sequence);
+
+         .step-idx{
+             text-align: center;
+             vertical-align: middle;
+
+             &:before {
+                 counter-increment: workflow-steps-sequence;
+                 content: counter(workflow-steps-sequence);
+             }
          }
      }
-
     </style>
 {%- endblock %}
 
@@ -234,12 +117,6 @@
                      assigned_role: 'editor',
                      step_type: 'approval',
                      instructions: '',
-                     show_actions: false,
-                     approve_field: '', approve_val: '', approve_notif_target: '', approve_notif_msg: '',
-                     reject_field: '', reject_val: '', reject_notif_target: '', reject_notif_msg: '',
-                     complete_field: '', complete_val: '', complete_notif_target: '', complete_notif_msg: '',
-                     success_field: '', success_val: '', success_notif_target: '', success_notif_msg: '',
-                     failure_field: '', failure_val: '', failure_notif_target: '', failure_notif_msg: ''
                  });
              },
 
@@ -247,9 +124,6 @@
                  this.steps.splice(index, 1);
              },
 
-             toggleActions(index) {
-                 this.steps[index].show_actions = !this.steps[index].show_actions;
-             },
 
 
          }));

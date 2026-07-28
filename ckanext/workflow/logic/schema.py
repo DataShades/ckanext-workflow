@@ -15,7 +15,7 @@ def workflow_definition_create(
     return {
         "name": [not_empty, unicode_safe],
         "description": [ignore_missing, unicode_safe],
-        "enabled": [default(True), boolean_validator],
+        "enabled": [boolean_validator],
         "trigger_type": [default("dataset_create"), unicode_safe],
         "dataset_type": [default("all"), unicode_safe],
         "steps": workflow_step(),
@@ -52,7 +52,7 @@ def workflow_definition_update(  # noqa: PLR0913
         "id": [not_empty, int_validator],
         "name": [not_empty, unicode_safe],
         "description": [ignore_missing, unicode_safe],
-        "enabled": [default(True), boolean_validator],
+        "enabled": [boolean_validator],
         "trigger_type": [default("dataset_create"), unicode_safe],
         "dataset_type": [default("all"), unicode_safe],
         "steps": workflow_step(),
