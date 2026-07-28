@@ -9,8 +9,9 @@ import ckan.plugins.toolkit as tk
 from ckan import types
 from ckan.common import CKANConfig
 
-from ckanext.workflow.service import WorkflowService
 from ckanext.theming.plugin import ThemingMixin
+
+from ckanext.workflow.service import start_workflow
 
 
 @tk.blanket.cli
@@ -32,17 +33,17 @@ class WorkflowPlugin(ThemingMixin, p.IPackageController, p.IConfigurer, p.Single
     def after_dataset_create(self, context: types.Context, pkg_dict: dict[str, Any]) -> None:
         if context.get("ignore_workflow") or context.get("ignore_auth"):
             return
-        # Start workflow for new dataset
-        WorkflowService.start_workflow(pkg_dict)
+
+        start_workflow(pkg_dict)
 
     @override
     def after_dataset_update(self, context: types.Context, pkg_dict: dict[str, Any]) -> None:
         if context.get("ignore_workflow") or context.get("ignore_auth"):
             return
 
-        # If there's an active workflow for this package, keep its state draft
-        inst = WorkflowService.get_instance_for_package(pkg_dict["id"])
-        user = tk.get_action("get_site_user")({"ignore_auth": True}, {})
-        if inst and pkg_dict.get("state") == "active":
-            context_sys = types.Context(ignore_auth=True, user=user["name"])
-            tk.get_action("package_patch")(context_sys, {"id": pkg_dict["id"], "state": "draft"})
+        # # If there's an active workflow for this package, keep its state draft
+        # inst = WorkflowService.get_instance_for_package(pkg_dict["id"])
+        # user = tk.get_action("get_site_user")({"ignore_auth": True}, {})
+        # if inst and pkg_dict.get("state") == "active":
+        #     context_sys = types.Context(ignore_auth=True, user=user["name"])
+        #     tk.get_action("package_patch")(context_sys, {"id": pkg_dict["id"], "state": "draft"})

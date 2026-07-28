@@ -85,7 +85,7 @@ class WorkflowInstance(tk.BaseModel):
         "workflow_instance",
         tk.BaseModel.metadata,
         sa.Column("id", sa.Text, primary_key=True, default=make_uuid),  # UUID
-        sa.Column("package_id", sa.Text, nullable=False, index=True),
+        sa.Column("object_id", sa.Text, nullable=False, index=True),
         sa.Column("workflow_id", sa.Integer, sa.ForeignKey("workflow_definition.id"), nullable=False),
         sa.Column("current_step_index", sa.Integer, default=0, nullable=False),
         sa.Column(
@@ -96,12 +96,13 @@ class WorkflowInstance(tk.BaseModel):
     )
 
     id: Mapped[str]
-    package_id: Mapped[str]
+    object_id: Mapped[str]
     workflow_id: Mapped[int]
     current_step_index: Mapped[int]
     status: Mapped[str]
     started_at: Mapped[datetime.datetime]
     updated_at: Mapped[datetime.datetime]
+
 
     tasks: Mapped[list[WorkflowTask]] = relationship(
         "WorkflowTask", back_populates="instance", cascade="all, delete-orphan", order_by="WorkflowTask.sequence"
@@ -131,7 +132,7 @@ class WorkflowTask(tk.BaseModel):
         sa.Column("completed_by", sa.Text, nullable=True),
         sa.Column("completed_at", sa.DateTime(True), nullable=True),
         sa.Column("comments", sa.Text, nullable=True),
-        sa.Column("post_actions", sa.Text, nullable=True),  # JSON config
+        sa.Column("post_actions", JSONB, server_default="{}", nullable=False),
     )
 
     id: Mapped[int]
@@ -145,7 +146,7 @@ class WorkflowTask(tk.BaseModel):
     completed_by: Mapped[str | None]
     completed_at: Mapped[datetime.datetime | None]
     comments: Mapped[str | None]
-    post_actions: Mapped[str | None]
+    post_actions: Mapped[dict[str, Any]]
 
     instance: Mapped[WorkflowInstance] = relationship("WorkflowInstance", back_populates="tasks")
 

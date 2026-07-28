@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import datetime
+from typing import Any
 
 import sqlalchemy as sa
-from typing import Any
-import ckan.plugins.toolkit as tk
-from ckan import types, model
 
-from ckanext.workflow.model import WorkflowInstance, WorkflowDefinition, WorkflowStep
+import ckan.plugins.toolkit as tk
+from ckan import model, types
+
+from ckanext.workflow.model import WorkflowDefinition, WorkflowInstance, WorkflowStep, WorkflowTask
 from ckanext.workflow.service import WorkflowService
+
 from . import schema
 
 
@@ -138,9 +141,61 @@ def workflow_definition_list(context: types.Context, data_dict: dict[str, Any]) 
 def workflow_instance_list(context: types.Context, data_dict: dict[str, Any]) -> list[dict[str, Any]]:
     """List all workflow instances."""
     tk.check_access("workflow_instance_list", context, data_dict)
-    WorkflowService.check_and_update_overdue_tasks()
-    instances = WorkflowService.get_all_instances()
+
+    if False:
+        _check_and_update_overdue_tasks(context["session"])  # pyright: ignore[reportUnreachable]
+
+    stmt = sa.select(WorkflowInstance).order_by(WorkflowInstance.started_at.desc())
+    instances = context["session"].scalars(stmt)
     return [inst.dictize() for inst in instances]
+
+
+def _check_and_update_overdue_tasks(session: types.AlchemySession):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    instances = session.scalars(sa.select(WorkflowInstance).where(WorkflowInstance.status.in_(["active", "overdue"])))
+    has_overdue = False
+
+    for inst in instances:
+        current_task = session.scalar(
+            sa.select(WorkflowTask).where(
+                WorkflowTask.instance_id == inst.id, WorkflowTask.sequence == inst.current_step_index
+            )
+        )
+        if not current_task:
+            continue
+
+        start_time = inst.started_at
+        if current_task.sequence > 0:
+            prev_task = session.scalar(
+                sa.select(WorkflowTask).where(
+                    WorkflowTask.instance_id == inst.id, WorkflowTask.sequence == current_task.sequence - 1
+                )
+            )
+            if prev_task and prev_task.completed_at:
+                start_time = prev_task.completed_at
+
+        step_def = session.scalar(
+            sa.select(WorkflowStep).where(
+                WorkflowStep.workflow_id == inst.workflow_id, WorkflowStep.sequence == current_task.sequence
+            )
+        )
+
+        if step_def and step_def.timeout_duration:
+            elapsed = (now - start_time).total_seconds()
+            if elapsed > step_def.timeout_duration and inst.status != "overdue":
+                has_overdue = True
+                inst.status = "overdue"
+                inst.updated_at = now
+                _notify_admin(f"Workflow for dataset {inst.object_id} is OVERDUE at step: {current_task.name}")
+
+    if has_overdue:
+        session.commit()
+
+
+def _notify_admin(message: str):
+    users = model.Session.query(model.User).filter(model.User.sysadmin == True).all()
+    for user in users:
+        WorkflowService.add_notification(user.name, message)
 
 
 @tk.validate_action_data(schema.workflow_instance_show)
@@ -178,7 +233,7 @@ def workflow_user_task_list(context: types.Context, data_dict: dict[str, Any]) -
                 "package": item["package"],
                 "instance": {
                     "id": item["instance"].id,
-                    "package_id": item["instance"].package_id,
+                    "object_id": item["instance"].object_id,
                     "status": item["instance"].status,
                     "workflow": {"id": item["instance"].workflow.id, "name": item["instance"].workflow.name},
                 },

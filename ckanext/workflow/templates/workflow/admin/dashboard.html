@@ -15,67 +15,79 @@
 {% block primary_content_inner %}
     {% if instances %}
         {%- call ui.util.call(ui.table, bordered=true, striped=true) -%}
-            {{ ui.table_head(ui.table_row(ui.util.map(ui.table_cell, ["Dataset", "Workflow Name", "Current / Final Step", "Assigned Role", "Started At", "Last Update", "Status", "Actions"], header=true))) }}
+            {{ ui.table_head(ui.table_row(ui.util.map(ui.table_cell, ["Dataset", "Workflow", "Current / Final Step", "Assigned Role", "Started At", "Last Update", "Status", "Actions"], header=true))) }}
 
             <tbody>
                 {% for item in instances %}
                     {% set inst = item.instance %}
                     {% set pkg = item.package %}
                     {% set task = item.current_task %}
+
                     <tr>
                         <td>
-                            <strong>{{ pkg.title or pkg.name or inst.package_id }}</strong>
-                            <br>
-                            <small class="text-muted">{{ inst.package_id }}</small>
+                            {{ ui.link(pkg.title, href=h.url_for(pkg.type|default("dataset") ~ ".read", id=inst.object_id)) }}
                         </td>
                         <td>{{ inst.workflow.name }}</td>
                         <td>
                             {% if inst.status in ['active', 'overdue'] and task %}
-                                <span class="text-primary" style="font-weight: bold;">
-                                    Step {{ task.sequence + 1 }}: {{ task.name }}
-                                </span>
+                                <strong>
+                                    {{ _("Step {num}: {name}").format(num=task.sequence + 1, name=task.name) }}
+                                </strong>
                                 <br>
-                                <small class="text-muted">{{ task.step_type|upper }}</small>
+                                <small>{{ task.step_type|upper }}</small>
+
                             {% elif inst.status == 'completed' %}
-                                <span class="text-success" style="font-weight: bold;"><i class="fa fa-check-circle"></i> Completed</span>
+                                <span>
+                                    {{ ui.icon("check") }}
+                                    {{ _("Completed") }}
+                                </span>
+
                             {% elif inst.status == 'rejected' %}
-                                <span class="text-danger" style="font-weight: bold;"><i class="fa fa-times-circle"></i> Rejected</span>
+                                {{ ui.icon("times") }}
+                                {{ _("Rejected") }}
+
                             {% elif inst.status == 'cancelled' %}
-                                <span class="text-warning" style="font-weight: bold;"><i class="fa fa-ban"></i> Cancelled</span>
+                                {{ ui.icon("ban") }}
+                                {{ _("Cancelled") }}
+
                             {% endif %}
                         </td>
                         <td>
                             {% if inst.status in ['active', 'overdue'] and task %}
-                                <span class="label label-info" style="font-size: 11px; background-color: #17a2b8; color: white; padding: 2px 6px; border-radius: 3px;">
-                                    {{ task.assigned_role|upper }}
-                                </span>
+                                {{ ui.badge(task.assigned_role|upper, style="info") }}
+
                             {% else %}
-                                <span class="text-muted">-</span>
+                                {{ ui.empty("---") }}
+
                             {% endif %}
                         </td>
-                        <td>{{ inst.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                        <td>{{ inst.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ ui.datetime(inst.started_at, with_hours=true) }}</td>
+                        <td>{{ ui.datetime(inst.updated_at, relative=true) }}</td>
                         <td>
                             {% if inst.status == 'active' %}
-                                <span class="label label-primary" style="background-color: #007bff; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">ACTIVE</span>
+                                {{ ui.badge(inst.status) }}
+
                             {% elif inst.status == 'overdue' %}
-                                <span class="label label-danger" style="background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; animation: pulse 2s infinite;">OVERDUE</span>
+                                {{ ui.badge(inst.status, style="danger") }}
+
                             {% elif inst.status == 'completed' %}
-                                <span class="label label-success" style="background-color: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">COMPLETED</span>
+                                {{ ui.badge(inst.status, style="success") }}
+
                             {% elif inst.status == 'rejected' %}
-                                <span class="label label-danger" style="background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;">REJECTED</span>
+                                {{ ui.badge(inst.status, style="danger") }}
+
                             {% elif inst.status == 'cancelled' %}
-                                <span class="label label-warning" style="background-color: #ffc107; color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold;">CANCELLED</span>
+                                {{ ui.badge(inst.status, style="warning") }}
+
                             {% endif %}
                         </td>
-                        <td style="text-align: center; vertical-align: middle;">
-                            <a href="/workflow/instance/{{ inst.id }}" class="btn btn-default btn-sm">
-                                <i class="fa fa-eye"></i> Details
-                            </a>
+                        <td>
+                            {{ ui.button(_("Details"), icon="eye", href=h.url_for("workflow.instance_detail", instance_id=inst.id), size="sm") }}
                         </td>
                     </tr>
                 {% endfor %}
             </tbody>
+
         {%- endcall %}
 
     {% else %}
@@ -84,16 +96,3 @@
     {% endif %}
 
 {% endblock %}
-
-
-{%- block styles -%}
-    {{ super() }}
-    <style>
-     @keyframes pulse {
-         0% { opacity: 1; }
-         50% { opacity: 0.5; }
-         100% { opacity: 1; }
-     }
-    </style>
-
-{%- endblock %}

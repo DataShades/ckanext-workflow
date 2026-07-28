@@ -13,8 +13,8 @@ def workflow_show_admin_tab():
     return config.show_admin_tab()
 
 
-def workflow_get_instance_for_package(package_id: str):
-    return WorkflowService.get_instance_for_package(package_id)
+def workflow_get_instance_for_package(object_id: str):
+    return WorkflowService.get_instance_for_package(object_id)
 
 
 def workflow_get_unread_notifications() -> list[WorkflowNotification]:

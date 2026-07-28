@@ -123,9 +123,9 @@ def admin_dashboard():
     resolved_instances = []
     for inst in instances:
         try:
-            pkg = tk.get_action("package_show")({}, {"id": inst["package_id"]})
+            pkg = tk.get_action("package_show")({}, {"id": inst["object_id"]})
         except tk.ObjectNotFound:
-            pkg = {"title": inst["package_id"], "name": inst["package_id"]}
+            pkg = {"title": inst["object_id"], "name": inst["object_id"]}
 
         current_task = None
         if inst["status"] in ["active", "overdue"]:
@@ -195,9 +195,9 @@ def instance_detail(instance_id: str):
     inst = tk.get_action("workflow_instance_show")({}, {"id": instance_id})
 
     try:
-        pkg = tk.get_action("package_show")({}, {"id": inst["package_id"]})
+        pkg = tk.get_action("package_show")({}, {"id": inst["object_id"]})
     except tk.ObjectNotFound:
-        pkg = {"title": inst["package_id"], "name": inst["package_id"]}
+        pkg = {"title": inst["object_id"], "name": inst["object_id"]}
 
     can_act = False
     current_task = None

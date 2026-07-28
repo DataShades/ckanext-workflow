@@ -1,10 +1,13 @@
 from __future__ import annotations
+
 from typing import Any
+
 import ckan.plugins.toolkit as tk
-from ckanext.workflow.service import user_has_role
-from ckan.types import Context
 from ckan.model.meta import Session
+from ckan.types import Context
+
 from ckanext.workflow.model import WorkflowInstance, WorkflowTask
+from ckanext.workflow.service import user_has_role
 
 
 def workflow_definition_create(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:  # pyright: ignore[reportUnusedParameter]
@@ -67,7 +70,7 @@ def workflow_task_complete(context: Context, data_dict: dict[str, Any]) -> dict[
 
     # Fetch package to check organization and user role
     try:
-        pkg = tk.get_action("package_show")(tk.fresh_context(context), {"id": inst.package_id})
+        pkg = tk.get_action("package_show")(tk.fresh_context(context), {"id": inst.object_id})
     except (tk.ObjectNotFound, tk.NotAuthorized) as e:
         return {"success": False, "msg": f"Access check failed: {e}"}
 
@@ -91,7 +94,7 @@ def workflow_instance_cancel(context: Context, data_dict: dict[str, Any]) -> dic
 
     # Check package_update access for the dataset
     try:
-        tk.check_access("package_update", tk.fresh_context(context), {"id": inst.package_id})
+        tk.check_access("package_update", tk.fresh_context(context), {"id": inst.object_id})
     except tk.NotAuthorized:
         return {"success": False, "msg": "Unauthorized to cancel this workflow"}
     return {"success": True}
@@ -109,7 +112,7 @@ def workflow_instance_show(context: Context, data_dict: dict[str, Any]) -> dict[
 
     # Check package_show access for the dataset
     try:
-        tk.check_access("package_show", tk.fresh_context(context), {"id": inst.package_id})
+        tk.check_access("package_show", tk.fresh_context(context), {"id": inst.object_id})
     except tk.NotAuthorized:
         return {"success": False, "msg": "Unauthorized to view this workflow instance"}
     return {"success": True}
