@@ -19,7 +19,7 @@ classifiers = [
 
 keywords = [ "CKAN",]
 requires-python = ">= 3.10"
-dependencies = ["ckanext-theming>=0.0.5"]
+dependencies = ["ckanext-theming>=0.0.6"]
 authors = [
     {name = "DataShades", email = "datashades@linkdigital.com.au"},
     {name = "Sergey Motornyuk", email = "sergey.motornyuk@linkdigital.com.au"},
