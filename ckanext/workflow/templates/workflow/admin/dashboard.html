@@ -15,7 +15,7 @@
 {% block primary_content_inner %}
     {% if instances %}
         {%- call ui.util.call(ui.table, bordered=true, striped=true) -%}
-            {{ ui.table_head(ui.table_row(ui.util.map(ui.table_cell, ["Dataset", "Workflow", "Current / Final Step", "Assigned Role", "Started At", "Last Update", "Status", "Actions"], header=true))) }}
+            {{ ui.table_head(ui.table_row(ui.util.map(ui.table_cell, ["Dataset", "Workflow", "Current / Final Step", "Started At", "Last Update", "Status", "Actions"], header=true))) }}
 
             <tbody>
                 {% for item in instances %}
@@ -49,15 +49,6 @@
                             {% elif inst.status == 'cancelled' %}
                                 {{ ui.icon("ban") }}
                                 {{ _("Cancelled") }}
-
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if inst.status in ['active', 'overdue'] and task %}
-                                {{ ui.badge(task.assigned_role|upper, style="info") }}
-
-                            {% else %}
-                                {{ ui.empty("---") }}
 
                             {% endif %}
                         </td>

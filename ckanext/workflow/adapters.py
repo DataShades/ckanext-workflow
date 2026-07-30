@@ -12,7 +12,6 @@ from ckan import model
 
 from ckanext.workflow.interfaces import IWorkflowAutomatedTaskRunner
 from ckanext.workflow.model import WorkflowTask
-from ckanext.workflow.service import WorkflowService
 
 log = logging.getLogger(__name__)
 
@@ -102,6 +101,8 @@ class NoOpAdapter(IWorkflowAutomatedTaskRunner):
 
     @override
     def trigger_task(self, task_id: str, dataset_id: str, callback_url: str, config: dict[str, Any]) -> bool:
+        from ckanext.workflow.service import complete_task  # noqa: PLC0415
+
         log.info("NoOpAdapter: immediately completing task %s", task_id)
 
         task = model.Session.query(WorkflowTask).filter(WorkflowTask.id == task_id).first()
@@ -109,7 +110,7 @@ class NoOpAdapter(IWorkflowAutomatedTaskRunner):
             log.error("NoOpAdapter: task %s not found in database", task_id)
             return False
 
-        success, msg = WorkflowService.complete_task(
+        success, msg = complete_task(
             instance_id=task.instance_id,
             sequence=task.sequence,
             action_type="complete",

@@ -51,3 +51,48 @@
     }
 
 }
+
+.workflow-steps-list {
+    margin-bottom: 20px;
+}
+.step-card {
+    background: #fff;
+    border: 1px solid #dcdcdc;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        border-color: #c0c0c0;
+    }
+}
+.step-card-header {
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-bottom: 1px solid #e9ecef;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.step-card-title {
+    font-size: 14px;
+    color: #333;
+}
+.step-card-body {
+    padding: 15px;
+}
+.empty-steps-alert {
+    padding: 20px;
+    background: #fdfdfd;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+.asterisk {
+    color: red;
+}

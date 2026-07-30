@@ -1,17 +1,27 @@
 from __future__ import annotations
 
 import datetime
+import logging
 from typing import Any
 
 import sqlalchemy as sa
 
 import ckan.plugins.toolkit as tk
 from ckan import model, types
+from ckan.lib.search import rebuild
 
-from ckanext.workflow.model import WorkflowDefinition, WorkflowInstance, WorkflowStep, WorkflowTask
-from ckanext.workflow.service import WorkflowService
+from ckanext.workflow.model import (
+    WorkflowDefinition,
+    WorkflowInstance,
+    WorkflowNotification,
+    WorkflowStep,
+    WorkflowTask,
+)
+from ckanext.workflow.service import add_notification, complete_task, notify_owner, user_has_role
 
 from . import schema
+
+log = logging.getLogger(__name__)
 
 
 @tk.validate_action_data(schema.workflow_definition_create)
@@ -80,10 +90,10 @@ def workflow_definition_update(context: types.Context, data_dict: dict[str, Any]
     wf.dataset_type = data_dict["dataset_type"]
     wf.metadata_template = None
 
-    # Delete old steps
+    # delete old steps
     model.Session.execute(sa.delete(WorkflowStep).where(WorkflowStep.workflow_id == wf.id))
 
-    # Add new steps
+    # add new steps
     for idx, step_data in enumerate(data_dict.get("steps", [])):
         step = WorkflowStep(
             workflow_id=wf.id,
@@ -95,12 +105,55 @@ def workflow_definition_update(context: types.Context, data_dict: dict[str, Any]
             post_actions=step_data["post_actions"],
         )
         model.Session.add(step)
+    model.Session.flush()
+
+    # synchronize all active/overdue instances of this workflow
+    stmt = sa.select(WorkflowInstance).where(
+        WorkflowInstance.workflow_id == wf.id, WorkflowInstance.status.in_(["active", "overdue"])
+    )
+    for inst in context["session"].scalars(stmt):
+        _sync_instance_tasks(inst)
 
     model.Session.commit()
 
     return wf.dictize()
 
 
+def _sync_instance_tasks(instance: WorkflowInstance):
+    """Synchronizes task rows of the instance to match the workflow definition steps."""
+    if not instance or not instance.workflow:
+        return
+
+    steps = instance.workflow.steps
+    steps_count = len(steps)
+    tasks = instance.tasks
+    tasks_count = len(tasks)
+
+    if tasks_count < steps_count:
+        # Create missing tasks using the step values as fallback/initial data
+        for i in range(tasks_count, steps_count):
+            step = steps[i]
+            task = WorkflowTask(
+                instance_id=instance.id,
+                sequence=i,
+                name=step.name,
+                assigned_role=step.assigned_role,
+                step_type=step.step_type,
+                instructions=step.instructions,
+                post_actions=step.post_actions,
+                status="pending",
+            )
+            model.Session.add(task)
+        model.Session.flush()
+    elif tasks_count > steps_count:
+        # Delete extra tasks that haven't been completed
+        for task in list(instance.tasks):
+            if task.sequence >= steps_count and task.status == "pending":
+                model.Session.delete(task)
+        model.Session.flush()
+
+
+@tk.side_effect_free
 @tk.validate_action_data(schema.workflow_definition_show)
 def workflow_definition_show(context: types.Context, data_dict: dict[str, Any]) -> dict[str, Any]:
     """Show details of a workflow definition.
@@ -129,6 +182,7 @@ def workflow_definition_delete(context: types.Context, data_dict: dict[str, Any]
     raise tk.ObjectNotFound("workflow_definition")
 
 
+@tk.side_effect_free
 def workflow_definition_list(context: types.Context, data_dict: dict[str, Any]) -> list[dict[str, Any]]:
     """List all workflow definitions."""
     tk.check_access("workflow_definition_list", context, data_dict)
@@ -138,6 +192,7 @@ def workflow_definition_list(context: types.Context, data_dict: dict[str, Any]) 
     return [wf.dictize() for wf in items]
 
 
+@tk.side_effect_free
 def workflow_instance_list(context: types.Context, data_dict: dict[str, Any]) -> list[dict[str, Any]]:
     """List all workflow instances."""
     tk.check_access("workflow_instance_list", context, data_dict)
@@ -195,9 +250,10 @@ def _check_and_update_overdue_tasks(session: types.AlchemySession):
 def _notify_admin(message: str):
     users = model.Session.query(model.User).filter(model.User.sysadmin == True).all()
     for user in users:
-        WorkflowService.add_notification(user.name, message)
+        add_notification(user.name, message)
 
 
+@tk.side_effect_free
 @tk.validate_action_data(schema.workflow_instance_show)
 def workflow_instance_show(context: types.Context, data_dict: dict[str, Any]) -> dict[str, Any]:
     """Show details of a workflow instance.
@@ -211,50 +267,81 @@ def workflow_instance_show(context: types.Context, data_dict: dict[str, Any]) ->
     return inst.dictize()
 
 
+@tk.side_effect_free
 def workflow_user_task_list(context: types.Context, data_dict: dict[str, Any]) -> list[dict[str, Any]]:
     """List pending tasks for the logged in user."""
     tk.check_access("workflow_user_task_list", context, data_dict)
-    user = context["user"]
-    tasks = WorkflowService.get_user_tasks(user)
 
-    results = []
-    for item in tasks:
-        results.append(
-            {
-                "task": {
-                    "id": item["task"].id,
-                    "sequence": item["task"].sequence,
-                    "name": item["task"].name,
-                    "assigned_role": item["task"].assigned_role,
-                    "step_type": item["task"].step_type,
-                    "instructions": item["task"].instructions,
-                    "status": item["task"].status,
-                },
-                "package": item["package"],
-                "instance": {
-                    "id": item["instance"].id,
-                    "object_id": item["instance"].object_id,
-                    "status": item["instance"].status,
-                    "workflow": {"id": item["instance"].workflow.id, "name": item["instance"].workflow.name},
-                },
-            }
-        )
+    pending_tasks = (
+        model.Session.query(WorkflowTask)
+        .join(WorkflowInstance)
+        .filter(WorkflowTask.status == "pending", WorkflowInstance.status.in_(["active", "overdue"]))
+        .all()
+    )
+
+    tasks: list[dict[str, Any]] = []
+    for task in pending_tasks:
+        if task.sequence != task.instance.current_step_index:
+            continue
+
+        object_id = task.instance.object_id
+        try:
+            pkg = tk.get_action("package_show")({"ignore_auth": True}, {"id": object_id})
+            org_id = pkg.get("owner_org")
+            if user_has_role(context["user"], org_id, task.assigned_role):
+                tasks.append({"task": task, "package": pkg, "instance": task.instance})
+        except Exception:
+            log.exception("Error retrieving package for user task")
+
+    results: list[dict[str, Any]] = [
+        {
+            "task": {
+                "id": item["task"].id,
+                "sequence": item["task"].sequence,
+                "name": item["task"].name,
+                "assigned_role": item["task"].assigned_role,
+                "step_type": item["task"].step_type,
+                "instructions": item["task"].instructions,
+                "status": item["task"].status,
+            },
+            "package": item["package"],
+            "instance": {
+                "id": item["instance"].id,
+                "object_id": item["instance"].object_id,
+                "status": item["instance"].status,
+                "workflow": {"id": item["instance"].workflow.id, "name": item["instance"].workflow.name},
+            },
+        }
+        for item in tasks
+    ]
     return results
 
 
+@tk.side_effect_free
 def workflow_user_notification_list(context: types.Context, data_dict: dict[str, Any]) -> list[dict[str, Any]]:
     """List notifications for the logged in user."""
     tk.check_access("workflow_user_notification_list", context, data_dict)
-    user = context["user"]
-    notifications = WorkflowService.get_notifications(user)
-    return [n.dictize() for n in notifications]
+
+    stmt = (
+        sa.select(WorkflowNotification)
+        .where(WorkflowNotification.user_name == context["user"], WorkflowNotification.read == sa.false())
+        .order_by(WorkflowNotification.created_at.desc())
+    )
+
+    return [n.dictize() for n in context["session"].scalars(stmt)]
 
 
 def workflow_user_notification_mark_read(context: types.Context, data_dict: dict[str, Any]) -> bool:
     """Mark all notifications as read for the logged in user."""
     tk.check_access("workflow_user_notification_mark_read", context, data_dict)
-    user = context["user"]
-    WorkflowService.mark_notifications_read(user)
+    stmt = (
+        sa.update(WorkflowNotification)
+        .where(WorkflowNotification.user_name == tk.current_user.name, WorkflowNotification.read == False)
+        .values({WorkflowNotification.read: True})
+    )
+    model.Session.execute(stmt)
+    model.Session.commit()
+
     return True
 
 
@@ -269,7 +356,7 @@ def workflow_task_complete(context: types.Context, data_dict: dict[str, Any]) ->
     """
     tk.check_access("workflow_task_complete", context, data_dict)
 
-    success, msg = WorkflowService.complete_task(
+    success, msg = complete_task(
         instance_id=data_dict["id"],
         sequence=data_dict["sequence"],
         action_type=data_dict["action_type"],
@@ -286,5 +373,17 @@ def workflow_instance_cancel(context: types.Context, data_dict: dict[str, Any]) 
     :param id: Workflow instance UUID
     """
     tk.check_access("workflow_instance_cancel", context, data_dict)
-    success, msg = WorkflowService.cancel_workflow(instance_id=data_dict["id"], user_name=context["user"])
-    return {"success": success, "message": msg}
+
+    stmt = sa.select(WorkflowInstance).where(WorkflowInstance.id == data_dict["id"])
+    instance = context["session"].scalar(stmt)
+    if not instance or instance.status not in ["active", "overdue"]:
+        return {"success": False, "message": "Instance is not active"}
+
+    instance.status = "cancelled"
+    instance.updated_at = datetime.datetime.now(datetime.timezone.utc)
+    model.Session.commit()
+    rebuild(instance.object_id)
+
+    notify_owner(instance.object_id, f"Workflow was cancelled by {context['user']}.")
+
+    return {"success": True, "message": "Workflow cancelled"}

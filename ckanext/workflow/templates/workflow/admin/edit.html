@@ -1,4 +1,5 @@
 {% extends "workflow/admin/base.html" %}
+{%- set workflow_users = h.workflow_get_users() -%}
 
 {%- block subtitle -%}
     {{ ui.subtitle_item(_("Edit") if workflow.id else _("Create")) }}
@@ -26,52 +27,68 @@
 
                 {{ ui.textarea(_("Describe the purpose of this workflow"), name="description", label=_("Description"), value=workflow.description, errors=[]) }}
 
-                {{ ui.select(name="dataset_type", label=_("Dataset Type Trigger"), nested_content=_("Select dataset types compatible with this workflow."), selected=workflow.dataset_type, options=[{"value": "", "text": _("Any type")}, {"value": "dataset", "text": _("Dataset")}]) if 0 }}
-
                 {{ ui.checkbox(name="enabled", label=_("Enable this workflow"), checked=workflow.enabled, value="true") }}
             {%- endcall %}
 
             {%- call ui.util.call(ui.accordion, title=_("Steps Sequence"), open=true) -%}
 
-                {%- call ui.util.call(ui.table, bordered=true, striped=true, attrs={"id": "steps-table"}) -%}
-                    {%- set headers = ["#", "Step Name", "Assigned Role", "Step Type", "Instructions / Guidelines", "Action"] -%}
+                <div class="workflow-steps-list">
+                    <template x-for="(step, index) in steps" :key="index">
+                        <div class="step-card">
+                            <div class="step-card-header">
+                                <span class="step-card-title">
+                                    <strong>Step <span x-text="index + 1"></span>:</strong> <span x-text="step.name || 'Unnamed Step'"></span>
+                                </span>
+                                {{ ui.button(_("Delete Step"), icon="trash", size="sm", style="danger", attrs={"@click": "removeStep(index)"}) }}
 
-                    {{ ui.table_head(ui.table_row(ui.util.map(ui.table_cell, headers, header=true))) }}
+                            </div>
+                            <div class="step-card-body">
 
-                    <tbody>
-                        <tr x-show="steps.length === 0">
-                            <td colspan="{{ headers | length }}" >
-                                {{ ui.empty('No steps added yet. Click "Add Step" below to configure workflow sequence.') }}
-                            </td>
-                        </tr>
-                        <template x-for="(step, index) in steps" :key="index">
-                            <tr>
-                                <td class="step-idx"></td>
-                                <td>
-                                    {{ ui.input(label=_("Name"), attrs={"x-bind:name": "`steps__${index}__name`", "x-model": "step.name"}, required=true) }}
-                                </td>
-                                <td>
-                                    {{ ui.select(label=_("Role"), attrs={"x-bind:name": "`steps__${index}__assigned_role`", "x-model": "step.assigned_role"}, options=[{"text": _("Member"), "value": "member"}, {"text": _("Editor"), "value": "editor"}, {"text": _("Admin"), "value": "admin"}]) }}
-                                </td>
-                                <td>
-                                    {{ ui.select(label=_("Type"), attrs={"x-bind:name": "`steps__${index}__step_type`", "x-model": "step.step_type"}, options=[{"text": _("Approval"), "value": "approval"}, {"text": _("Manual Task"), "value": "manual_task"}, {"text": _("Automated Task"), "value": "automated_task"}]) }}
-                                </td>
-                                <td>
-                                    {{ ui.input(label=_("Instructions"), attrs={"x-bind:name": "`steps__${index}__instructions`", "x-model": "step.instructions"}, placeholder="e.g. Please fill license or fail on keyword") }}
+                                {{ ui.input(label=_("Name"), placeholder="e.g., Data Review", required=true, attrs={":name": "`steps__${index}__name`", "x-model": "step.name"}) }}
 
-                                </td>
-                                <td style="text-align: center; vertical-align: middle;">
-                                    {%- call ui.util.call(ui.button_group) -%}
-                                        {{ ui.button(size="sm", icon="trash", style="danger", attrs={"x-on:click": "removeStep(index)"}) }}
+                                {{ ui.select(label=_("Type"), required=true, attrs={":name": "`steps__${index}__step_type`", "x-model": "step.step_type"}, options=[{"text": "Approval", "value": "approval"}, {"text": "Manual Task", "value": "manual_task"}, {"text": "Automated Task", "value": "automated_task"}]) }}
+
+                                <template x-if="step.step_type !== 'automated_task'">
+                                    {%- call ui.util.call(ui.select_box, label=_("Assignee (Role or User)"), required=true, attrs={":name": "`steps__${index}__assigned_role`", "x-model": "step.assigned_role"}) -%}
+                                        <optgroup label="Roles">
+                                            <option value="member">{{ _("Member") }}</option>
+                                            <option value="editor">{{ _("Editor") }}</option>
+                                            <option value="admin">{{ _("Admin") }}</option>
+                                        </optgroup>
+                                        <optgroup label="Users">
+                                            {% for user in workflow_users %}
+                                                <option value="{{ user.value }}">{{ user.text }}</option>
+                                            {% endfor %}
+                                        </optgroup>
                                     {%- endcall %}
-                                </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                {%- endcall %}
+                                </template>
+                                <template x-if="step.step_type === 'automated_task'">
+                                    {%- call ui.util.call(ui.select_box, label=_("Automated Task"), required=true, attrs={":name": "`steps__${index}__instructions`", "x-model": "step.instructions"}) -%}
+                                        <option value="">-- Select Task --</option>
+                                        {% for task in h.workflow_get_automated_tasks() %}
+                                            <option value="{{ task.value }}">{{ task.text }}</option>
+                                        {% endfor %}
+                                    {%- endcall %}
+                                </template>
+                                <template x-if="step.step_type === 'automated_task'">
+                                    <input type="hidden" :name="`steps__${index}__assigned_role`" value="system">
+                                </template>
 
+                                <template x-if="step.step_type !== 'automated_task'">
+                                    {{ ui.textarea(label=_("Instructions / Guidelines"), placeholder="Describe what the assignee needs to do...", attrs={":name": "`steps__${index}__instructions`", "x-model": "step.instructions"}) }}
 
-                {{ ui.button(_("Add Step"), icon="add", attrs={"@click": "addStep()"}) }}
+                                </template>
+                            </div>
+                            <input type="hidden" :name="`steps__${index}__post_actions`" :value="JSON.stringify(step.post_actions || {on_success: [], on_failure: [], on_approve: [], on_reject: [], on_complete: []})">
+                        </div>
+                    </template>
+
+                    <div x-show="steps.length === 0" class="empty-steps-alert">
+                        {{ ui.empty('No steps added yet. Click "Add Step" below to configure workflow sequence.') }}
+                    </div>
+                </div>
+
+                {{ ui.button(_("Add Step"), icon="add", attrs={"@click": "addStep()", "type": "button"}) }}
 
             {%- endcall %}
 
@@ -83,25 +100,6 @@
     {%- endcall %}
 
 {% endblock %}
-
-{%- block styles -%}
-    {{ super() }}
-    <style>
-     #steps-table {
-         counter-reset: workflow-steps-sequence;
-
-         .step-idx{
-             text-align: center;
-             vertical-align: middle;
-
-             &:before {
-                 counter-increment: workflow-steps-sequence;
-                 content: counter(workflow-steps-sequence);
-             }
-         }
-     }
-    </style>
-{%- endblock %}
 
 {%- block scripts -%}
     {{ super() }}
@@ -117,15 +115,13 @@
                      assigned_role: 'editor',
                      step_type: 'approval',
                      instructions: '',
+                     post_actions: {},
                  });
              },
 
              removeStep(index) {
                  this.steps.splice(index, 1);
              },
-
-
-
          }));
      });
     </script>

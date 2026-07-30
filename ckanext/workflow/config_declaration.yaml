@@ -5,3 +5,9 @@ groups:
       - key: ckanext.workflow.ui.show_admin_tab
         type: bool
         description: Display the tab for workflows in the CKAN Admin UI.
+
+      - key: ckanext.workflow.automated_tasks
+        type: list
+        description: |
+          A list of keys of automated tasks that can be executed by the
+          workflow engine.

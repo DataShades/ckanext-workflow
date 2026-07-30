@@ -9,7 +9,7 @@ import ckan.plugins.toolkit as tk
 from ckan.lib.navl.dictization_functions import unflatten
 from ckan.logic import parse_params, tuplize_dict
 
-from ckanext.workflow.service import user_has_role
+from ckanext.workflow.service import start_workflow, user_has_role
 
 blueprint = Blueprint("workflow", __name__, template_folder="templates")
 
@@ -190,6 +190,16 @@ def generate_mermaid_chart(workflow: dict[str, Any], active_step_index: int | No
     return "\n".join(lines)
 
 
+@blueprint.route("/<object_type>/<object_id>/workflow/initiate")
+def initiate_workflow(object_type: str, object_id: str):
+    tk.check_access("sysadmin", {})
+    pkg = tk.get_action("package_show")({}, {"id": object_id})
+    if start_workflow(pkg):
+        tk.h.flash_success("Workflow has been initiated")
+
+    return tk.redirect_to(tk.url_for("dataset.read", id=object_id))
+
+
 @blueprint.route("/workflow/instance/<string:instance_id>")
 def instance_detail(instance_id: str):
     inst = tk.get_action("workflow_instance_show")({}, {"id": instance_id})
@@ -209,7 +219,6 @@ def instance_detail(instance_id: str):
         if current_task and pkg.get("owner_org"):
             can_act = user_has_role(tk.c.user, pkg["owner_org"], current_task["assigned_role"])
 
-    # Generate visual workflow chart
     chart_code = ""
     try:
         # standard users can view definition chart for this instance

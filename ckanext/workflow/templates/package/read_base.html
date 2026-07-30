@@ -1,0 +1,9 @@
+{% ckan_extends %}
+
+{% block content_action %}
+
+    {% if h.check_access('sysadmin') and not h.workflow_get_instance_for_package(pkg_dict.id) %}
+        {{ ui.content_action(_("Initiate workflow"), href=h.url_for("workflow.initiate_workflow", object_id=pkg_dict.id, object_type="dataset"), icon="route") }}
+    {% endif %}
+    {{ super() }}
+{% endblock %}
