@@ -1,0 +1,53 @@
+.workflow-timeline {
+    position: relative;
+    padding-left: 2rem;
+
+    .timeline-line {
+        position: absolute;
+        left: 1rem;
+        top: 0.5rem;
+        bottom: 0.5rem;
+        width: 2px;
+        background-color: #ddd;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+
+        .timeline-bullet {
+            position: absolute;
+            left: -1.5rem;
+            top: 0;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            border: 2px solid;
+            background-color: white;
+            z-index: 1;
+            text-align: center;
+            line-height: 1.25rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+
+        }
+
+        &.timeline-item--completed .timeline-bullet {
+            border-color: #28a745; color: #28a745; background-color: #d4edda;
+        }
+        &.timeline-item--rejected  .timeline-bullet {
+            border-color: #dc3545; color: #dc3545; background-color: #f8d7da;
+        }
+        &.timeline-item--current .timeline-bullet {
+            border-color: #007bff; color: #007bff; background-color: #cce5ff; box-shadow: 0 0 8px rgba(0,123,255,0.5);
+        }
+        &.timeline-item--default .timeline-bullet {
+            border-color: #aaa; color: #aaa;
+        }
+
+        .timeline-info {
+            margin-left: 0.5rem;
+        }
+    }
+
+}

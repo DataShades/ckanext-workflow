@@ -9,22 +9,22 @@ import ckan.plugins.toolkit as tk
 from ckan import types
 from ckan.common import CKANConfig
 
-from ckanext.theming.plugin import ThemingMixin
+from ckanext.theming.plugin import themed_plugin
 
 from ckanext.workflow.service import start_workflow
 
 
+@themed_plugin
 @tk.blanket.cli
 @tk.blanket.helpers
 @tk.blanket.actions
 @tk.blanket.auth_functions
 @tk.blanket.blueprints
 @tk.blanket.config_declarations
-class WorkflowPlugin(ThemingMixin, p.IPackageController, p.IConfigurer, p.SingletonPlugin):
+class WorkflowPlugin(p.IPackageController, p.IConfigurer, p.SingletonPlugin):
     # IConfigurer
     @override
     def update_config(self, config: CKANConfig) -> None:
-        super().update_config(config)
         tk.add_template_directory(config, "templates")
         tk.add_resource("assets", "workflow")
 

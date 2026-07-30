@@ -7,8 +7,8 @@ scripts:
     preload:
       - base/main
 
-# css:
-#   filter: rcssmin
-#   output: ckanext-workflow/%(version)s-styles.css
-#   contents:
-#     - css/styles.css
+styles:
+  filter: rcssmin
+  output: ckanext-workflow/%(version)s-styles.css
+  contents:
+    - styles.css

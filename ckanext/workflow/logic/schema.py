@@ -93,6 +93,15 @@ def workflow_task_complete(
         "comment": [ignore_missing, unicode_safe],
     }
 
+@tk.validator_args
+def workflow_start(
+    not_empty: types.Validator,
+    unicode_safe: types.Validator,
+) -> types.Schema:
+    return {
+        "id": [not_empty, unicode_safe],
+    }
+
 
 @tk.validator_args
 def workflow_instance_cancel(

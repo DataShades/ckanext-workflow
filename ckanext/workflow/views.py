@@ -166,7 +166,7 @@ def generate_mermaid_chart(workflow: dict[str, Any], active_step_index: int | No
         step_type = step.get("step_type", "")
 
         if is_last:
-            next_node = "Published([Published: Active State])"
+            next_node = "Published([Published])"
         else:
             next_step = steps[i + 1]
 
@@ -177,12 +177,12 @@ def generate_mermaid_chart(workflow: dict[str, Any], active_step_index: int | No
 
         if step_type == "approval":
             lines.append(f"    Step{i} -->|Approve| {next_node}")
-            lines.append(f"    Step{i} -->|Reject| Rejected([Rejected: Draft State])")
+            lines.append(f"    Step{i} -->|Reject| Rejected([Rejected])")
         elif step_type == "manual_task":
             lines.append(f"    Step{i} -->|Complete| {next_node}")
         elif step_type == "automated_task":
             lines.append(f"    Step{i} -->|Success| {next_node}")
-            lines.append(f"    Step{i} -->|Failure| Rejected([Rejected: Draft State])")
+            lines.append(f"    Step{i} -->|Failure| Rejected([Rejected])")
 
     if active_step_index is not None and active_step_index < len(steps):
         lines.append(f"    style Step{active_step_index} fill:#cce5ff,stroke:#007bff,stroke-width:3px;")
