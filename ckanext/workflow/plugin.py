@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 import sqlalchemy as sa
 from typing_extensions import override
@@ -25,31 +25,27 @@ from ckanext.workflow.service import start_workflow
 @tk.blanket.blueprints
 @tk.blanket.config_declarations
 class WorkflowPlugin(
-    p.IPackageController,
     p.IConfigurer,
+    p.ISignal,
     lib_plugins.DefaultPermissionLabels,
+    p.IPermissionLabels,
     p.SingletonPlugin,
 ):
-    p.implements(p.IPermissionLabels)
+    # ISignal
+    @override
+    def get_signal_subscriptions(self) -> types.SignalMapping:
+        return {
+            tk.signals.action_succeeded: [
+                {"receiver": _initiate_workflow_on_create, "sender": "package_create"},
+                {"receiver": _initiate_workflow_on_update, "sender": "package_update"},
+            ]
+        }
 
     # IConfigurer
     @override
     def update_config(self, config: CKANConfig) -> None:
         tk.add_template_directory(config, "templates")
         tk.add_resource("assets", "workflow")
-
-    # IPackageController
-    @override
-    def after_dataset_create(self, context: types.Context, pkg_dict: dict[str, Any]) -> None:
-        if context.get("ignore_workflow"):
-            return
-
-        start_workflow(pkg_dict)
-
-    @override
-    def after_dataset_update(self, context: types.Context, pkg_dict: dict[str, Any]) -> None:
-        if context.get("ignore_workflow"):
-            return
 
     # IPermissionLabels
     @override
@@ -61,7 +57,7 @@ class WorkflowPlugin(
 
     @override
     def get_user_dataset_labels(self, user_obj: model.User) -> list[str]:
-        labels = list(super().get_user_dataset_labels(user_obj))
+        labels = super().get_user_dataset_labels(user_obj)
         if not user_obj or user_obj.is_anonymous:
             return labels
 
@@ -133,3 +129,21 @@ def _get_dataset_labels(dataset_obj: model.Package) -> list[str] | None:
                     labels.append(f"workflow-role:{org_id}:admin")
 
     return list(set(labels))
+
+
+def _initiate_workflow_on_create(action: Literal["package_create"], **kwargs: Any) -> None:
+    context: types.Context | None = kwargs.get("context")
+    if context and context.get("ignore_workflow"):
+        return
+
+    if result := kwargs.get("result"):
+        start_workflow(result, trigger="create")
+
+
+def _initiate_workflow_on_update(action: Literal["package_update"], **kwargs: Any) -> None:
+    context: types.Context | None = kwargs.get("context")
+    if context and context.get("ignore_workflow"):
+        return
+
+    if result := kwargs.get("result"):
+        start_workflow(result, trigger="update")

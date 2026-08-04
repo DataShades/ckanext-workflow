@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
+import sqlalchemy as sa
 from flask import Blueprint, request
 from flask.views import MethodView
 
 import ckan.plugins.toolkit as tk
+from ckan import model
 from ckan.lib.navl.dictization_functions import unflatten
 from ckan.logic import parse_params, tuplize_dict
 
+from ckanext.workflow.model import WorkflowInstance
 from ckanext.workflow.service import start_workflow, user_has_role
 
 blueprint = Blueprint("workflow", __name__, template_folder="templates")
@@ -55,7 +58,7 @@ def list_definitions():
 class CreateDefinition(MethodView):
     def get(self):
         tk.check_access("workflow_definition_create", {})
-        return tk.render("workflow/admin/edit.html", {"workflow": None})
+        return tk.render("workflow/admin/edit.html", {"workflow": None, "has_active_instances": False})
 
     def post(self):
         workflow = unflatten(tuplize_dict(parse_params(request.form)))
@@ -69,6 +72,7 @@ class CreateDefinition(MethodView):
             extra_vars = {
                 "error_summary": err.error_summary,
                 "workflow": workflow,
+                "has_active_instances": False,
             }
 
             return tk.render("workflow/admin/edit.html", extra_vars)
@@ -80,6 +84,13 @@ blueprint.add_url_rule("/ckan-admin/workflow/new", view_func=CreateDefinition.as
 
 
 class EditDefinition(MethodView):
+    def _has_instances(self, workflow_id: int) -> bool:
+        stmt = sa.exists().where(
+            WorkflowInstance.workflow_id == workflow_id, WorkflowInstance.status.in_(["active", "overdue"])
+        )
+
+        return model.Session.scalar(sa.select(stmt)) or False
+
     def post(self, workflow_id: int):
         data_dict = unflatten(tuplize_dict(parse_params(request.form)))
 
@@ -92,6 +103,7 @@ class EditDefinition(MethodView):
             extra_vars = {
                 "error_summary": err.error_summary,
                 "workflow": tk.get_action("workflow_definition_show")({}, {"id": workflow_id}),
+                "has_active_instances": self._has_instances(workflow_id),
             }
             return tk.render("workflow/admin/edit.html", extra_vars)
 
@@ -99,7 +111,11 @@ class EditDefinition(MethodView):
 
     def get(self, workflow_id: int):
         tk.check_access("workflow_definition_update", {})
-        extra_vars = {"workflow": tk.get_action("workflow_definition_show")({}, {"id": workflow_id})}
+
+        extra_vars = {
+            "workflow": tk.get_action("workflow_definition_show")({}, {"id": workflow_id}),
+            "has_active_instances": self._has_instances(workflow_id),
+        }
 
         return tk.render("workflow/admin/edit.html", extra_vars)
 
@@ -146,43 +162,103 @@ def user_dashboard():
     return tk.render("workflow/dashboard.html", extra_vars={"tasks": tasks, "notifications": notifications})
 
 
+def get_node_for_transition(transition_str: str | None, current_index: int, steps_list: list[dict[str, Any]]) -> str:
+    if not transition_str:
+        # Default is to go to the next step
+        next_idx = current_index + 1
+        if next_idx >= len(steps_list):
+            return "Published([Published])"
+        return f"Step{next_idx}"
+
+    if transition_str == "next":
+        next_idx = current_index + 1
+        if next_idx >= len(steps_list):
+            return "Published([Published])"
+        return f"Step{next_idx}"
+
+    if transition_str == "reject":
+        return "Rejected([Rejected])"
+
+    if transition_str.startswith("step:"):
+        try:
+            target_idx = int(transition_str[5:])
+            if target_idx < len(steps_list):
+                return f"Step{target_idx}"
+        except ValueError:
+            pass
+
+    return "Rejected([Rejected])"
+
+
 def generate_mermaid_chart(workflow: dict[str, Any], active_step_index: int | None = None):
     lines = ["graph TD", "    Start([Start: Dataset Created])"]
 
-    steps = workflow["steps"]
+    steps = workflow.get("steps", [])
 
     if not steps:
         return "graph TD\n    NoSteps[No steps configured]"
 
-    first_step = steps[0]
-    first_name = first_step.get("name")
-    first_type = first_step.get("step_type", "")
-    first_role = first_step.get("assigned_role")
-
-    lines.append(f'    Start --> Step0["Step 1: {first_name}<br/>({first_type.upper()})<br/>Role: {first_role}"]')
-
+    # 1. Define all step nodes
     for i, step in enumerate(steps):
-        is_last = i == len(steps) - 1
-        step_type = step.get("step_type", "")
+        name = step.get("name") or "Unnamed Step"
+        stype = step.get("step_type") or "manual_task"
+        role = step.get("assigned_role")
 
-        if is_last:
-            next_node = "Published([Published])"
+        # Node text
+        text = f"Step {i + 1}: {name}<br/>({stype.upper()})"
+        if stype != "automated_task" and role:
+            text += f"<br/>Role: {role}"
+
+        if stype == "branching":
+            lines.append(f'    Step{i}{{"{text}"}}')
         else:
-            next_step = steps[i + 1]
+            lines.append(f'    Step{i}["{text}"]')
 
-            next_node = (
-                f'Step{i + 1}["Step {i + 2}: {next_step.get("name")}<br/>'
-                f'({(next_step.get("step_type")).upper()})<br/>Role: {next_step.get("assigned_role")}"]'
-            )
+    # 2. Add start transition
+    lines.append("    Start --> Step0")
 
-        if step_type == "approval":
-            lines.append(f"    Step{i} -->|Approve| {next_node}")
-            lines.append(f"    Step{i} -->|Reject| Rejected([Rejected])")
-        elif step_type == "manual_task":
-            lines.append(f"    Step{i} -->|Complete| {next_node}")
-        elif step_type == "automated_task":
-            lines.append(f"    Step{i} -->|Success| {next_node}")
-            lines.append(f"    Step{i} -->|Failure| Rejected([Rejected])")
+    # 3. Add transitions
+    for i, step in enumerate(steps):
+        stype = step.get("step_type") or "manual_task"
+        config = step.get("config") or {}
+
+        if stype == "approval":
+            # Success path
+            success_node = get_node_for_transition("next", i, steps)
+            lines.append(f"    Step{i} -->|Approve| {success_node}")
+
+            # Rejection path
+            reject_transition = config.get("on_reject_transition") or "reject"
+            reject_node = get_node_for_transition(reject_transition, i, steps)
+            lines.append(f"    Step{i} -->|Reject| {reject_node}")
+
+        elif stype == "automated_task":
+            # Success path
+            success_node = get_node_for_transition("next", i, steps)
+            lines.append(f"    Step{i} -->|Success| {success_node}")
+
+            # Failure path
+            failure_transition = config.get("on_failure_transition") or "reject"
+            failure_node = get_node_for_transition(failure_transition, i, steps)
+            lines.append(f"    Step{i} -->|Failure| {failure_node}")
+
+        elif stype == "branching":
+            # Option A path
+            label_a = config.get("branch_a_label") or "Option A"
+            transition_a = config.get("branch_a_transition") or "next"
+            node_a = get_node_for_transition(transition_a, i, steps)
+            lines.append(f"    Step{i} -->|{label_a}| {node_a}")
+
+            # Option B path
+            label_b = config.get("branch_b_label") or "Option B"
+            transition_b = config.get("branch_b_transition") or "next"
+            node_b = get_node_for_transition(transition_b, i, steps)
+            lines.append(f"    Step{i} -->|{label_b}| {node_b}")
+
+        else:  # manual_task
+            # Completion path
+            success_node = get_node_for_transition("next", i, steps)
+            lines.append(f"    Step{i} -->|Complete| {success_node}")
 
     if active_step_index is not None and active_step_index < len(steps):
         lines.append(f"    style Step{active_step_index} fill:#cce5ff,stroke:#007bff,stroke-width:3px;")
@@ -194,7 +270,8 @@ def generate_mermaid_chart(workflow: dict[str, Any], active_step_index: int | No
 def initiate_workflow(object_type: str, object_id: str):
     tk.check_access("sysadmin", {})
     pkg = tk.get_action("package_show")({}, {"id": object_id})
-    if start_workflow(pkg):
+
+    if start_workflow(pkg, trigger="manual"):
         tk.h.flash_success("Workflow has been initiated")
 
     return tk.redirect_to(tk.url_for("dataset.read", id=object_id))

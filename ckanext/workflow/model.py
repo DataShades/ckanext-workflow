@@ -49,6 +49,24 @@ class WorkflowDefinition(tk.BaseModel):
         return data
 
 
+def format_seconds_to_duration(seconds: int) -> str:
+    if not seconds:
+        return ""
+    parts = []
+    days, remainder = divmod(seconds, 86400)
+    if days > 0:
+        parts.append(f"{days}d")
+    hours, remainder = divmod(remainder, 3600)
+    if hours > 0:
+        parts.append(f"{hours}h")
+    minutes, seconds = divmod(remainder, 60)
+    if minutes > 0:
+        parts.append(f"{minutes}m")
+    if seconds > 0:
+        parts.append(f"{seconds}s")
+    return " ".join(parts)
+
+
 class WorkflowStep(tk.BaseModel):
     __table__: ClassVar[sa.Table] = sa.Table(
         "workflow_step",
@@ -61,7 +79,7 @@ class WorkflowStep(tk.BaseModel):
         sa.Column("step_type", sa.Text, nullable=False),
         sa.Column("instructions", sa.Text, nullable=True),
         sa.Column("timeout_duration", sa.Integer, nullable=False, server_default="0"),
-        sa.Column("post_actions", JSONB, server_default="{}", nullable=False),
+        sa.Column("config", JSONB, server_default="{}", nullable=False),
     )
 
     id: Mapped[str]
@@ -72,12 +90,14 @@ class WorkflowStep(tk.BaseModel):
     step_type: Mapped[str]
     instructions: Mapped[str | None]
     timeout_duration: Mapped[int]
-    post_actions: Mapped[dict[str, Any]]
+    config: Mapped[dict[str, Any]]
 
     workflow: Mapped[WorkflowDefinition] = relationship("WorkflowDefinition", back_populates="steps")
 
     def dictize(self) -> dict[str, Any]:
-        return table_dictize(self, {})
+        data = table_dictize(self, {})
+        data["timeout_duration"] = format_seconds_to_duration(self.timeout_duration)
+        return data
 
 
 class WorkflowInstance(tk.BaseModel):
@@ -132,7 +152,7 @@ class WorkflowTask(tk.BaseModel):
         sa.Column("completed_by", sa.Text, nullable=True),
         sa.Column("completed_at", sa.DateTime(True), nullable=True),
         sa.Column("comments", sa.Text, nullable=True),
-        sa.Column("post_actions", JSONB, key="_post_actions", server_default="{}", nullable=False),
+        sa.Column("config", JSONB, key="_config", server_default="{}", nullable=False),
     )
 
     id: Mapped[int]
@@ -146,7 +166,7 @@ class WorkflowTask(tk.BaseModel):
     completed_by: Mapped[str | None]
     completed_at: Mapped[datetime.datetime | None]
     comments: Mapped[str | None]
-    _post_actions: Mapped[dict[str, Any]]
+    _config: Mapped[dict[str, Any]]
 
     instance: Mapped[WorkflowInstance] = relationship("WorkflowInstance", back_populates="tasks")
 
@@ -195,23 +215,23 @@ class WorkflowTask(tk.BaseModel):
         self._instructions = value
 
     @property
-    def post_actions(self) -> dict[str, Any]:
+    def config(self) -> dict[str, Any]:
         s = self.step
-        return s.post_actions if s else (self._post_actions or {})
+        return s.config if s else (self._config or {})
 
-    @post_actions.setter
-    def post_actions(self, value: dict[str, Any]):
-        self._post_actions = value
+    @config.setter
+    def config(self, value: dict[str, Any]):
+        self._config = value
 
     def dictize(self) -> dict[str, Any]:
         data = table_dictize(self, {})
-        for k in ["_name", "_assigned_role", "_step_type", "_instructions", "_post_actions"]:
+        for k in ["_name", "_assigned_role", "_step_type", "_instructions", "_config"]:
             data.pop(k, None)
         data["name"] = self.name
         data["assigned_role"] = self.assigned_role
         data["step_type"] = self.step_type
         data["instructions"] = self.instructions
-        data["post_actions"] = self.post_actions
+        data["config"] = self.config
         return data
 
 

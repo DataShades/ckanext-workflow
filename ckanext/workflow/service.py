@@ -4,7 +4,7 @@ import contextlib
 import datetime
 import logging
 import uuid
-from typing import Any
+from typing import Any, Literal
 
 import sqlalchemy as sa
 
@@ -23,6 +23,10 @@ from ckanext.workflow.model import (
 log = logging.getLogger(__name__)
 
 
+def _commit():
+    model.Session.commit()
+
+
 def user_has_role(user_name: str | None, organization_id: str, required_role: str):
     if not user_name:
         return False
@@ -34,13 +38,17 @@ def user_has_role(user_name: str | None, organization_id: str, required_role: st
     return authz.has_user_permission_for_group_or_org(organization_id, user_name, permission)
 
 
-def start_workflow(package_dict: dict[str, Any]):
+def start_workflow(package_dict: dict[str, Any], trigger: Literal["create", "update", "manual"] = "manual"):
     dataset_type = package_dict.get("type", "dataset")
     # First check specific trigger/type match
 
     wf = model.Session.scalar(
         sa.select(WorkflowDefinition).where(
-            WorkflowDefinition.enabled == sa.true(), WorkflowDefinition.dataset_type == dataset_type
+            sa.and_(
+                WorkflowDefinition.enabled == sa.true(),
+                WorkflowDefinition.dataset_type == dataset_type,
+                WorkflowDefinition.trigger_type.like(f"%{trigger}%"),
+            )
         )
     )
 
@@ -48,7 +56,11 @@ def start_workflow(package_dict: dict[str, Any]):
         # Fall back to default trigger on all datasets
         wf = model.Session.scalar(
             sa.select(WorkflowDefinition).where(
-                WorkflowDefinition.enabled == sa.true(), WorkflowDefinition.dataset_type == "all"
+                sa.and_(
+                    WorkflowDefinition.enabled == sa.true(),
+                    WorkflowDefinition.dataset_type == "all",
+                    WorkflowDefinition.trigger_type.like(f"%{trigger}%"),
+                )
             )
         )
 
@@ -86,13 +98,11 @@ def start_workflow(package_dict: dict[str, Any]):
             step_type=step.step_type,
             instructions=step.instructions,
             status="pending",
-            post_actions=step.post_actions,
+            config=step.config,
         )
         model.Session.add(task)
 
-    model.Session.commit()
-
-    rebuild(package_dict["id"])
+    _commit()
 
     # If the first step is automated, run it recursively. Else notify assignees.
     first_step = wf.steps[0]
@@ -156,7 +166,7 @@ def _set_dataset_field(object_id: str, field_name: str, value: Any):
 def add_notification(user_name: str, message: str):
     notification = WorkflowNotification(user_name=user_name, message=message, read=False)
     model.Session.add(notification)
-    model.Session.commit()
+    _commit()
 
 
 def notify_owner(object_id: str, message: str):
@@ -214,6 +224,82 @@ def _notify_assignees(instance_id: str, step_sequence: int):
                 )
 
 
+def _execute_transition(
+    instance: WorkflowInstance,
+    current_sequence: int,
+    target_transition: str | dict[str, Any] | None,
+    user_name: str | None,
+    comment: str | None = None,
+):
+    target_type = "next"
+    target_index = current_sequence + 1
+
+    if isinstance(target_transition, dict):
+        tt_type = target_transition.get("type")
+        if tt_type == "go_to_step":
+            target_type = "go_to_step"
+            target_index = int(target_transition.get("step_index", current_sequence + 1))
+        elif tt_type == "reject":
+            target_type = "reject"
+    elif isinstance(target_transition, str):
+        if target_transition.startswith("step:"):
+            target_type = "go_to_step"
+            target_index = int(target_transition[5:])
+        elif target_transition == "reject":
+            target_type = "reject"
+
+    if target_type == "reject":
+        instance.status = "rejected"
+        instance.updated_at = datetime.datetime.now(datetime.timezone.utc)
+        _commit()
+        rebuild(instance.object_id)
+        notify_owner(
+            instance.object_id,
+            f"Workflow was rejected. Reason: {comment or 'No comments'}",
+        )
+        return True, "Workflow rejected"
+
+    total_steps = len(instance.tasks)
+    if target_index >= total_steps:
+        instance.status = "completed"
+        instance.current_step_index = total_steps
+        instance.updated_at = datetime.datetime.now(datetime.timezone.utc)
+        _commit()
+        rebuild(instance.object_id)
+        notify_owner(instance.object_id, "Workflow completed successfully! Dataset was published.")
+        return True, "Workflow completed"
+
+    # If jumping backward, reset intermediate tasks
+    if target_index < current_sequence:
+        for t in instance.tasks:
+            if target_index <= t.sequence <= current_sequence:
+                t.status = "pending"
+                t.completed_by = None
+                t.completed_at = None
+                t.comments = None
+    # If jumping forward, mark intermediate tasks as skipped
+    elif target_index > current_sequence:
+        for t in instance.tasks:
+            if current_sequence < t.sequence < target_index:
+                t.status = "skipped"
+                t.completed_by = "system"
+                t.completed_at = datetime.datetime.now(datetime.timezone.utc)
+
+    instance.current_step_index = target_index
+    instance.status = "active"
+    instance.updated_at = datetime.datetime.now(datetime.timezone.utc)
+    _notify_assignees(instance.id, target_index)
+    _commit()
+    rebuild(instance.object_id)
+
+    # Run next task if automated
+    next_task = next((t for t in instance.tasks if t.sequence == target_index), None)
+    if next_task and next_task.step_type == "automated_task":
+        _execute_automated_task(instance.id, target_index)
+
+    return True, "Workflow advanced"
+
+
 def complete_task(  # noqa: PLR0911, PLR0915, C901
     instance_id: str, sequence: int, action_type: str, comment: str | None = None, user_name: str | None = None
 ):
@@ -241,9 +327,9 @@ def complete_task(  # noqa: PLR0911, PLR0915, C901
             return False, "Failed to verify permissions due to missing package"
 
     actions_dict = {}
-    if task.post_actions:
+    if task.config:
         with contextlib.suppress(Exception):
-            actions_dict = task.post_actions
+            actions_dict = task.config
 
     if action_type == "reject":
         task.status = "rejected"
@@ -251,20 +337,30 @@ def complete_task(  # noqa: PLR0911, PLR0915, C901
         task.completed_at = datetime.datetime.now(datetime.timezone.utc)
         task.comments = comment
 
-        instance.status = "rejected"
-        instance.updated_at = datetime.datetime.now(datetime.timezone.utc)
-
         # Execute rejection post actions
         _execute_post_actions(instance.object_id, actions_dict.get("on_reject", []))
 
-        model.Session.commit()
-        rebuild(instance.object_id)
+        rejection_transition = actions_dict.get("on_reject_transition") or "reject"
+        success, msg = _execute_transition(instance, sequence, rejection_transition, user_name, comment)
+        return success, msg
 
-        notify_owner(
-            instance.object_id,
-            f"Workflow task '{task.name}' was rejected by {user_name}. Reason: {comment or 'No comments'}",
-        )
-        return True, "Workflow rejected"
+    if action_type in ["branch_a", "branch_b"]:
+        task.status = "completed"
+        task.completed_by = user_name
+        task.completed_at = datetime.datetime.now(datetime.timezone.utc)
+
+        # Use user-defined option label for comments
+        label_key = f"{action_type}_label"
+        option_label = actions_dict.get(label_key) or action_type.upper().replace("_", " ")
+        task.comments = f"Selected option: {option_label}. Comment: {comment or ''}"
+
+        # Execute branching post actions (if any)
+        _execute_post_actions(instance.object_id, actions_dict.get(f"on_{action_type}", []))
+
+        transition_key = f"{action_type}_transition"
+        transition = actions_dict.get(transition_key) or "next"
+        success, msg = _execute_transition(instance, sequence, transition, user_name, comment)
+        return success, msg
 
     task.status = "completed"
     task.completed_by = user_name
@@ -277,35 +373,8 @@ def complete_task(  # noqa: PLR0911, PLR0915, C901
     else:
         _execute_post_actions(instance.object_id, actions_dict.get("on_complete", []))
 
-    next_step_index = sequence + 1
-    total_steps = len(instance.tasks)
-
-    if next_step_index >= total_steps:
-        instance.status = "completed"
-        instance.current_step_index = total_steps
-        instance.updated_at = datetime.datetime.now(datetime.timezone.utc)
-        model.Session.commit()
-        rebuild(instance.object_id)
-
-        notify_owner(instance.object_id, "Workflow completed successfully! Dataset was published.")
-        return True, "Workflow completed"
-    instance.current_step_index = next_step_index
-    instance.status = "active"
-    instance.updated_at = datetime.datetime.now(datetime.timezone.utc)
-    _notify_assignees(instance_id, next_step_index)
-    model.Session.commit()
-    rebuild(instance.object_id)
-
-    # Run next step recursively if automated
-    next_task = (
-        model.Session.query(WorkflowTask)
-        .filter(WorkflowTask.instance_id == instance_id, WorkflowTask.sequence == next_step_index)
-        .first()
-    )
-    if next_task and next_task.step_type == "automated_task":
-        _execute_automated_task(instance_id, next_step_index)
-
-    return True, "Task completed, workflow advanced"
+    success, msg = _execute_transition(instance, sequence, "next", user_name, comment)
+    return success, msg
 
 
 def _execute_automated_task(instance_id: str, sequence: int):
@@ -354,23 +423,21 @@ def _execute_automated_task(instance_id: str, sequence: int):
     if triggered:
         # Task is successfully handed off to external engine.
         task.comments = "Triggered external automated execution"
-        model.Session.commit()
+        _commit()
     else:
         # Failed to trigger: immediately fail/reject the task to avoid hanging
         task.completed_by = "system"
         task.completed_at = datetime.datetime.now(datetime.timezone.utc)
         task.status = "rejected"
         task.comments = "Failed to trigger external execution webhook"
-        instance.status = "rejected"
-        instance.updated_at = datetime.datetime.now(datetime.timezone.utc)
 
         # Execute failure post actions
         actions_dict = {}
-        if task.post_actions:
+        if task.config:
             with contextlib.suppress(Exception):
-                actions_dict = task.post_actions
+                actions_dict = task.config
         _execute_post_actions(instance.object_id, actions_dict.get("on_failure", []))
-        model.Session.commit()
-        rebuild(instance.object_id)
 
-        notify_owner(instance.object_id, f"Automated workflow step '{task.name}' failed to trigger.")
+        # Use transition logic for failure
+        failure_transition = actions_dict.get("on_failure_transition") or "reject"
+        _execute_transition(instance, sequence, failure_transition, "system", "Failed to trigger automated task")

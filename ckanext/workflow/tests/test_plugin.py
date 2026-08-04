@@ -1,11 +1,13 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import pytest
+
 from ckan import model
 from ckan.tests import factories, helpers
-from ckanext.workflow.plugin import WorkflowPlugin
+
 from ckanext.workflow.model import WorkflowDefinition, WorkflowInstance, WorkflowTask
+from ckanext.workflow.plugin import WorkflowPlugin
+
 
 @pytest.mark.ckan_config("ckan.plugins", "workflow")
 @pytest.mark.usefixtures("with_plugins", "clean_db")
@@ -40,7 +42,7 @@ class TestWorkflowPermissionLabels:
 
         # Create dataset
         dataset = factories.Dataset(owner_org=org["id"], creator_user_id=creator_user["id"])
-        
+
         # Instantiate plugin
         plugin = WorkflowPlugin()
 
@@ -66,7 +68,7 @@ class TestWorkflowPermissionLabels:
             status="active"
         )
         model.Session.add(wf_inst)
-        
+
         task = WorkflowTask(
             instance_id=wf_inst.id,
             sequence=0,
@@ -83,19 +85,19 @@ class TestWorkflowPermissionLabels:
 
         # Retrieve dataset permission labels
         labels = plugin.get_dataset_labels(pkg_obj)
-        
+
         # Verify that 'public' is NOT in the labels
         assert "public" not in labels
-        
+
         # Verify that creator can see the dataset
         creator_user_obj = model.User.get(pkg_obj.creator_user_id)
         creator_username = creator_user_obj.name
         assert f"user:{creator_username}" in labels
-        
+
         # Verify that org editors and admins can see the dataset
         assert f"workflow-role:{org['id']}:editor" in labels
         assert f"workflow-role:{org['id']}:admin" in labels
-        
+
         # Verify that members cannot see it (member label is missing)
         assert f"workflow-role:{org['id']}:member" not in labels
 

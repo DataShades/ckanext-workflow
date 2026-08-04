@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import pytest
+
+from ckan.plugins.toolkit import NotAuthorized
 from ckan.tests import factories, helpers
 from ckan.tests.helpers import call_auth
-from ckan.plugins.toolkit import NotAuthorized
 
 # Parametrize similar sysadmin-only actions
 SYSADMIN_ONLY_ACTIONS = [
@@ -35,7 +35,7 @@ class TestWorkflowAuth:
         org = factories.Organization()
         editor = factories.User()
         member = factories.User()
-        
+
         # Add members to org
         helpers.call_action(
             "organization_member_create",
@@ -49,17 +49,18 @@ class TestWorkflowAuth:
             username=member["name"],
             role="member"
         )
-        
+
         # Mock package, instance, and task
         dataset = factories.Dataset(owner_org=org["id"])
-        
-        from ckanext.workflow.model import WorkflowDefinition, WorkflowInstance, WorkflowTask
+
         from ckan import model
-        
+
+        from ckanext.workflow.model import WorkflowDefinition, WorkflowInstance, WorkflowTask
+
         wf_def = WorkflowDefinition(name="Test", trigger_type="dataset_create", dataset_type="all")
         model.Session.add(wf_def)
         model.Session.flush()
-        
+
         wf_inst = WorkflowInstance(
             id="auth-inst-uuid",
             object_id=dataset["id"],
@@ -68,7 +69,7 @@ class TestWorkflowAuth:
             status="active"
         )
         model.Session.add(wf_inst)
-        
+
         task = WorkflowTask(
             instance_id=wf_inst.id,
             sequence=0,
@@ -79,7 +80,7 @@ class TestWorkflowAuth:
         )
         model.Session.add(task)
         model.Session.commit()
-        
+
         # Editor should be allowed
         assert call_auth(
             "workflow_task_complete",
@@ -87,7 +88,7 @@ class TestWorkflowAuth:
             id=wf_inst.id,
             sequence=0
         )
-        
+
         # Member should be denied
         with pytest.raises(NotAuthorized):
             call_auth(
@@ -101,7 +102,7 @@ class TestWorkflowAuth:
         org = factories.Organization()
         editor = factories.User()
         member = factories.User()
-        
+
         helpers.call_action(
             "organization_member_create",
             id=org["id"],
@@ -114,16 +115,17 @@ class TestWorkflowAuth:
             username=member["name"],
             role="member"
         )
-        
+
         dataset = factories.Dataset(owner_org=org["id"])
-        
-        from ckanext.workflow.model import WorkflowDefinition, WorkflowInstance
+
         from ckan import model
-        
+
+        from ckanext.workflow.model import WorkflowDefinition, WorkflowInstance
+
         wf_def = WorkflowDefinition(name="Test", trigger_type="dataset_create", dataset_type="all")
         model.Session.add(wf_def)
         model.Session.flush()
-        
+
         wf_inst = WorkflowInstance(
             id="cancel-inst-uuid",
             object_id=dataset["id"],
@@ -133,14 +135,14 @@ class TestWorkflowAuth:
         )
         model.Session.add(wf_inst)
         model.Session.commit()
-        
+
         # Editor (has update access to package) should be allowed to cancel
         assert call_auth(
             "workflow_instance_cancel",
             {"user": editor["name"]},
             id=wf_inst.id
         )
-        
+
         # Member (no update access to package) should be denied
         with pytest.raises(NotAuthorized):
             call_auth(

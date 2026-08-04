@@ -56,11 +56,13 @@ def workflow_definition_create(context: types.Context, data_dict: dict[str, Any]
             assigned_role=step_data["assigned_role"],
             step_type=step_data["step_type"],
             instructions=step_data.get("instructions"),
-            post_actions=step_data["post_actions"],
+            timeout_duration=step_data.get("timeout_duration", 0),
+            config=step_data["config"],
         )
         model.Session.add(step)
 
     model.Session.commit()
+    model.Session.refresh(wf)
 
     return wf.dictize()
 
@@ -83,6 +85,27 @@ def workflow_definition_update(context: types.Context, data_dict: dict[str, Any]
     if not wf:
         raise tk.ObjectNotFound("workflow_definition")
 
+    # Enforce step constraints when active/overdue instances exist
+    active_instances_exist = model.Session.scalar(
+        sa.select(sa.func.count(WorkflowInstance.id)).where(
+            WorkflowInstance.workflow_id == wf.id,
+            WorkflowInstance.status.in_(["active", "overdue"])
+        )
+    ) > 0
+
+    if active_instances_exist:
+        new_steps = data_dict.get("steps", [])
+        old_steps = wf.steps
+        if len(new_steps) < len(old_steps):
+            raise tk.ValidationError({
+                "steps": "Cannot remove steps when there are incomplete workflow instances."
+            })
+        for i in range(len(old_steps)):
+            if new_steps[i].get("step_type") != old_steps[i].step_type:
+                raise tk.ValidationError({
+                    "steps": f"Cannot change step type or swap step {i + 1} ({old_steps[i].name}) when there are incomplete workflow instances."
+                })
+
     wf.name = data_dict["name"]
     wf.description = data_dict.get("description")
     wf.enabled = data_dict["enabled"]
@@ -102,7 +125,8 @@ def workflow_definition_update(context: types.Context, data_dict: dict[str, Any]
             assigned_role=step_data["assigned_role"],
             step_type=step_data["step_type"],
             instructions=step_data.get("instructions"),
-            post_actions=step_data["post_actions"],
+            timeout_duration=step_data.get("timeout_duration", 0),
+            config=step_data["config"],
         )
         model.Session.add(step)
     model.Session.flush()
@@ -115,6 +139,7 @@ def workflow_definition_update(context: types.Context, data_dict: dict[str, Any]
         _sync_instance_tasks(inst)
 
     model.Session.commit()
+    model.Session.refresh(wf)
 
     return wf.dictize()
 
@@ -140,7 +165,7 @@ def _sync_instance_tasks(instance: WorkflowInstance):
                 assigned_role=step.assigned_role,
                 step_type=step.step_type,
                 instructions=step.instructions,
-                post_actions=step.post_actions,
+                config=step.config,
                 status="pending",
             )
             model.Session.add(task)

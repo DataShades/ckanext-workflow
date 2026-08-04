@@ -1,9 +1,10 @@
-# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import pytest
-from ckan import model
+
 import ckan.plugins.toolkit as tk
+from ckan import model
+
 import ckanext.workflow.model as wf_model  # noqa: F401
 
 

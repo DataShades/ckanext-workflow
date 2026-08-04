@@ -125,6 +125,13 @@
                     {{ ui.button(_("Approve"), icon="check", type="submit", style="success", attrs={"name": "action_type", "value": "approve"}) }}
 
                     {{ ui.button(_("Reject"), icon="times", type="submit", style="danger", attrs={"name": "action_type", "value": "reject"}) }}
+                {% elif current_task.step_type == 'branching' %}
+                    {% set post_act = current_task.config or {} %}
+                    {% set label_a = post_act.get('branch_a_label') or _("Option A") %}
+                    {% set label_b = post_act.get('branch_b_label') or _("Option B") %}
+                    {{ ui.button(label_a, type="submit", style="success", attrs={"name": "action_type", "value": "branch_a"}) }}
+
+                    {{ ui.button(label_b, type="submit", style="primary", attrs={"name": "action_type", "value": "branch_b"}) }}
                 {% else %}
                     {{ ui.button(_("Mark as Complete"), icon="check-circle", type="submit", style="success", attrs={"name": "action_type", "value": "complete"}) }}
 
