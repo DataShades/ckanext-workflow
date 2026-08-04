@@ -6,6 +6,7 @@ import ckan.plugins.toolkit as tk
 
 SHOW_ADMIN_TAB = "ckanext.workflow.ui.show_admin_tab"
 TASK_LIST = "ckanext.workflow.automated_tasks"
+RUNNER = "ckan.plugins.workflow.automated_runner"
 
 
 def show_admin_tab() -> bool:
@@ -28,3 +29,7 @@ def get_automated_tasks() -> list[dict[str, str]]:
         title = tk.config.get(f"ckanext.workflow.automated_task.{key}.title", key)
         tasks.append({"value": key, "text": title})
     return tasks
+
+
+def runner() -> str:
+    return tk.config[RUNNER]

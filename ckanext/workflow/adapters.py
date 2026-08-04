@@ -10,13 +10,15 @@ from typing_extensions import override
 import ckan.plugins.toolkit as tk
 from ckan import model
 
-from ckanext.workflow.interfaces import IWorkflowAutomatedTaskRunner
+from ckanext.workflow.interfaces import TaskRunner
 from ckanext.workflow.model import WorkflowTask
+
+from . import config
 
 log = logging.getLogger(__name__)
 
 
-class N8nAdapter(IWorkflowAutomatedTaskRunner):
+class N8nAdapter(TaskRunner):
     """Adapter for triggering and cancelling tasks in n8n."""
 
     @override
@@ -96,7 +98,7 @@ class N8nAdapter(IWorkflowAutomatedTaskRunner):
         return "unknown"
 
 
-class NoOpAdapter(IWorkflowAutomatedTaskRunner):
+class NoOpAdapter(TaskRunner):
     """No-op adapter that immediately completes the task for local testing."""
 
     @override
@@ -134,9 +136,9 @@ class NoOpAdapter(IWorkflowAutomatedTaskRunner):
         return "completed"
 
 
-def get_automated_task_runner() -> IWorkflowAutomatedTaskRunner:
+def get_automated_task_runner() -> TaskRunner:
     """Loads the configured IWorkflowAutomatedTaskRunner implementation."""
-    runner_setting = tk.config.get("ckan.plugins.workflow.automated_runner", "n8n")
+    runner_setting = config.runner()
 
     if runner_setting == "n8n":
         return N8nAdapter()
@@ -149,7 +151,7 @@ def get_automated_task_runner() -> IWorkflowAutomatedTaskRunner:
     runner_class = getattr(module, class_name)
 
     runner = runner_class()
-    if not isinstance(runner, IWorkflowAutomatedTaskRunner):
+    if not isinstance(runner, TaskRunner):
         msg = f"Runner class {runner_setting} must implement IWorkflowAutomatedTaskRunner"
         raise TypeError(msg)
     return runner

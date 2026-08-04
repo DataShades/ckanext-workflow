@@ -6,6 +6,13 @@ groups:
         type: bool
         description: Display the tab for workflows in the CKAN Admin UI.
 
+
+      - key: ckan.plugins.workflow.automated_runner
+        default: noop
+        description: |
+          The name of the automated task runner to use for executing automated
+          tasks.
+
       - key: ckanext.workflow.automated_tasks
         type: list
         description: |

@@ -41,14 +41,14 @@ class WorkflowPlugin(
     # IPackageController
     @override
     def after_dataset_create(self, context: types.Context, pkg_dict: dict[str, Any]) -> None:
-        if context.get("ignore_workflow") or context.get("ignore_auth"):
+        if context.get("ignore_workflow"):
             return
 
         start_workflow(pkg_dict)
 
     @override
     def after_dataset_update(self, context: types.Context, pkg_dict: dict[str, Any]) -> None:
-        if context.get("ignore_workflow") or context.get("ignore_auth"):
+        if context.get("ignore_workflow"):
             return
 
     # IPermissionLabels

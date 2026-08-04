@@ -1,15 +1,14 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import pytest
-
 from ckan import model
 from ckan.tests import factories, helpers
-
-from ckanext.workflow.model import WorkflowInstance, WorkflowTask
 from ckanext.workflow.plugin import WorkflowPlugin
+from ckanext.workflow.model import WorkflowDefinition, WorkflowInstance, WorkflowTask
 
-
-@pytest.mark.usefixtures("clean_db")
+@pytest.mark.ckan_config("ckan.plugins", "workflow")
+@pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestWorkflowPermissionLabels:
 
     def test_permission_labels_restricted_by_role(self):
@@ -41,7 +40,7 @@ class TestWorkflowPermissionLabels:
 
         # Create dataset
         dataset = factories.Dataset(owner_org=org["id"], creator_user_id=creator_user["id"])
-
+        
         # Instantiate plugin
         plugin = WorkflowPlugin()
 
@@ -49,19 +48,30 @@ class TestWorkflowPermissionLabels:
         default_labels = plugin.get_dataset_labels(model.Package.get(dataset["id"]))
         assert "public" in default_labels or f"owner_org:{org['id']}" in default_labels
 
+        # Create a mock definition in database first to satisfy FK constraint
+        wf_def = WorkflowDefinition(
+            name="Mock Workflow Definition",
+            trigger_type="dataset_create",
+            dataset_type="all"
+        )
+        model.Session.add(wf_def)
+        model.Session.commit()
+
         # Create workflow instance and active task for 'editor' role
         wf_inst = WorkflowInstance(
             id="test-instance-uuid",
             object_id=dataset["id"],
-            workflow_id=1,  # Mock ID
+            workflow_id=wf_def.id,
             current_step_index=0,
             status="active"
         )
         model.Session.add(wf_inst)
-
+        
         task = WorkflowTask(
             instance_id=wf_inst.id,
             sequence=0,
+            name="Mock Task",
+            step_type="approval",
             status="pending",
             assigned_role="editor"  # Only editors or admins can see/complete
         )
@@ -73,17 +83,19 @@ class TestWorkflowPermissionLabels:
 
         # Retrieve dataset permission labels
         labels = plugin.get_dataset_labels(pkg_obj)
-
+        
         # Verify that 'public' is NOT in the labels
         assert "public" not in labels
-
+        
         # Verify that creator can see the dataset
-        assert f"user:{creator_user['name']}" in labels
-
+        creator_user_obj = model.User.get(pkg_obj.creator_user_id)
+        creator_username = creator_user_obj.name
+        assert f"user:{creator_username}" in labels
+        
         # Verify that org editors and admins can see the dataset
         assert f"workflow-role:{org['id']}:editor" in labels
         assert f"workflow-role:{org['id']}:admin" in labels
-
+        
         # Verify that members cannot see it (member label is missing)
         assert f"workflow-role:{org['id']}:member" not in labels
 

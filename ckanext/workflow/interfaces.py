@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 
-class IWorkflowAutomatedTaskRunner(ABC):
+class TaskRunner(ABC):
     """Interface class for external workflow engines running automated steps.
 
     This abstracts all communication between CKAN and the external task execution engines
