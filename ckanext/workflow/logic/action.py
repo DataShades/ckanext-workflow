@@ -86,25 +86,27 @@ def workflow_definition_update(context: types.Context, data_dict: dict[str, Any]
         raise tk.ObjectNotFound("workflow_definition")
 
     # Enforce step constraints when active/overdue instances exist
-    active_instances_exist = model.Session.scalar(
-        sa.select(sa.func.count(WorkflowInstance.id)).where(
-            WorkflowInstance.workflow_id == wf.id,
-            WorkflowInstance.status.in_(["active", "overdue"])
+    active_instances_exist = (
+        model.Session.scalar(
+            sa.select(sa.func.count(WorkflowInstance.id)).where(
+                WorkflowInstance.workflow_id == wf.id, WorkflowInstance.status.in_(["active", "overdue"])
+            )
         )
-    ) > 0
+        > 0
+    )
 
     if active_instances_exist:
         new_steps = data_dict.get("steps", [])
         old_steps = wf.steps
         if len(new_steps) < len(old_steps):
-            raise tk.ValidationError({
-                "steps": "Cannot remove steps when there are incomplete workflow instances."
-            })
+            raise tk.ValidationError({"steps": "Cannot remove steps when there are incomplete workflow instances."})
         for i in range(len(old_steps)):
             if new_steps[i].get("step_type") != old_steps[i].step_type:
-                raise tk.ValidationError({
-                    "steps": f"Cannot change step type or swap step {i + 1} ({old_steps[i].name}) when there are incomplete workflow instances."
-                })
+                raise tk.ValidationError(
+                    {
+                        "steps": f"Cannot change step type or swap step {i + 1} ({old_steps[i].name}) when there are incomplete workflow instances."
+                    }
+                )
 
     wf.name = data_dict["name"]
     wf.description = data_dict.get("description")
@@ -222,18 +224,21 @@ def workflow_instance_list(context: types.Context, data_dict: dict[str, Any]) ->
     """List all workflow instances."""
     tk.check_access("workflow_instance_list", context, data_dict)
 
-    if False:
-        _check_and_update_overdue_tasks(context["session"])  # pyright: ignore[reportUnreachable]
-
     stmt = sa.select(WorkflowInstance).order_by(WorkflowInstance.started_at.desc())
     instances = context["session"].scalars(stmt)
     return [inst.dictize() for inst in instances]
 
 
-def _check_and_update_overdue_tasks(session: types.AlchemySession):
+def workflow_timeout_apply(context: types.Context, data_dict: dict[str, Any]) -> list[dict[str, Any]]:
+    """Mark overdue workflow instances based on their current task and step timeout duration."""
+    tk.check_access("workflow_timeout_apply", context, data_dict)
+
+    session = context["session"]
+
     now = datetime.datetime.now(datetime.timezone.utc)
     instances = session.scalars(sa.select(WorkflowInstance).where(WorkflowInstance.status.in_(["active", "overdue"])))
-    has_overdue = False
+
+    overdue: list[WorkflowInstance] = []
 
     for inst in instances:
         current_task = session.scalar(
@@ -262,14 +267,18 @@ def _check_and_update_overdue_tasks(session: types.AlchemySession):
 
         if step_def and step_def.timeout_duration:
             elapsed = (now - start_time).total_seconds()
-            if elapsed > step_def.timeout_duration and inst.status != "overdue":
-                has_overdue = True
+            if elapsed >= step_def.timeout_duration and inst.status != "overdue":
+                overdue.append(inst)
                 inst.status = "overdue"
                 inst.updated_at = now
                 _notify_admin(f"Workflow for dataset {inst.object_id} is OVERDUE at step: {current_task.name}")
+            elif elapsed < step_def.timeout_duration and inst.status == "overdue":
+                inst.status = "active"
+                inst.updated_at = now
 
-    if has_overdue:
-        session.commit()
+    session.commit()
+
+    return [inst.dictize() for inst in overdue]
 
 
 def _notify_admin(message: str):

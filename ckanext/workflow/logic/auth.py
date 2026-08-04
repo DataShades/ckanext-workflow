@@ -34,6 +34,10 @@ def workflow_definition_list(context: Context, data_dict: dict[str, Any]) -> dic
     return {"success": False, "msg": "Only sysadmins can list workflow definitions"}
 
 
+def workflow_timeout_apply(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:  # pyright: ignore[reportUnusedParameter]
+    return {"success": False, "msg": "Only sysadmins can mark workflows as overdue"}
+
+
 def workflow_instance_list(context: Context, data_dict: dict[str, Any]) -> dict[str, Any]:  # pyright: ignore[reportUnusedParameter]
     return {"success": False, "msg": "Only sysadmins can view workflow instances"}
 

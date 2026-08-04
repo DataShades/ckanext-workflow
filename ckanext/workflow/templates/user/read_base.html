@@ -1,0 +1,6 @@
+{% ckan_extends %}
+
+{%- block content_action -%}
+    {{ super() }}
+    {{ ui.content_action(_("My tasks"), href=h.url_for("workflow.user_dashboard"), icon="list-check") }}
+{%- endblock content_action %}

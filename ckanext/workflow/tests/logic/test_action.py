@@ -569,3 +569,10 @@ class TestWorkflowExecution:
         assert "Step3 -->|Complete| Step4" in chart
         assert "Step4 -->|Success| Published([Published])" in chart
         assert "Step4 -->|Failure| Step1" in chart
+
+        # Verify outcome highlights
+        completed_chart = generate_mermaid_chart(wf, instance_status="completed")
+        assert "style Published fill:#d4edda,stroke:#28a745,stroke-width:3px;" in completed_chart
+
+        rejected_chart = generate_mermaid_chart(wf, instance_status="rejected")
+        assert "style Rejected fill:#f8d7da,stroke:#dc3545,stroke-width:3px;" in rejected_chart

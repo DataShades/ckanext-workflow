@@ -66,23 +66,31 @@
                     </div>
                 </div>
             {% endfor %}
+
+            {% if instance.status in ['completed', 'rejected', 'cancelled'] %}
+                {% set outcome_class = 'completed' if instance.status == 'completed' else 'rejected' if instance.status == 'rejected' else 'default' %}
+                {% set outcome_label = 'Published' if instance.status == 'completed' else 'Rejected' if instance.status == 'rejected' else 'Cancelled' %}
+                {% set outcome_bullet = ui.icon("check") if instance.status == 'completed' else ui.icon("times") if instance.status == 'rejected' else ui.icon("ban") %}
+                <div class="timeline-item timeline-item--{{ outcome_class }}">
+                    <div class="timeline-bullet" style="display: flex; align-items: center; justify-content: center;">
+                        {{ outcome_bullet }}
+                    </div>
+                    <div class="timeline-info">
+                        <h4>Outcome: {{ _(outcome_label)|upper }}</h4>
+                        <p>The workflow execution is finished.</p>
+                    </div>
+                </div>
+            {% endif %}
         </div>
     {%- endcall %}
 
     {%- call ui.util.call(ui.sidebar_section, title=_("Workflow Status")) -%}
         <strong>Status:</strong>
-        {%- set style = "primary" -%}
-        {% if  instance.status in ['overdue', "rejected"] %}
-            {%- set status = "danger" -%}
-
-        {% elif instance.status == 'completed' %}
-            {%- set status = "success" -%}
-
-        {% elif instance.status == 'cancelled' %}
-            {%- set status = "warning" -%}
-
-        {% endif %}
-        {{ ui.badge(instance.status) }}
+        <div style="margin-top: 5px;">
+            <div class="workflow-status-prominent workflow-status-prominent--{{ instance.status }}">
+                {{ _(instance.status)|upper }}
+            </div>
+        </div>
 
         <div>
             <strong>Started At:</strong> {{ ui.datetime(instance.started_at) }}

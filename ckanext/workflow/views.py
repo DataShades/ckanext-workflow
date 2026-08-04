@@ -190,7 +190,7 @@ def get_node_for_transition(transition_str: str | None, current_index: int, step
     return "Rejected([Rejected])"
 
 
-def generate_mermaid_chart(workflow: dict[str, Any], active_step_index: int | None = None):
+def generate_mermaid_chart(workflow: dict[str, Any], active_step_index: int | None = None, instance_status: str | None = None):
     lines = ["graph TD", "    Start([Start: Dataset Created])"]
 
     steps = workflow.get("steps", [])
@@ -263,6 +263,11 @@ def generate_mermaid_chart(workflow: dict[str, Any], active_step_index: int | No
     if active_step_index is not None and active_step_index < len(steps):
         lines.append(f"    style Step{active_step_index} fill:#cce5ff,stroke:#007bff,stroke-width:3px;")
 
+    if instance_status == "completed":
+        lines.append("    style Published fill:#d4edda,stroke:#28a745,stroke-width:3px;")
+    elif instance_status == "rejected":
+        lines.append("    style Rejected fill:#f8d7da,stroke:#dc3545,stroke-width:3px;")
+
     return "\n".join(lines)
 
 
@@ -302,7 +307,7 @@ def instance_detail(instance_id: str):
         wf = tk.get_action("workflow_definition_show")({"ignore_auth": True}, {"id": inst["workflow_id"]})
         if wf:
             active_idx = inst["current_step_index"] if inst["status"] in ["active", "overdue"] else None
-            chart_code = generate_mermaid_chart(wf, active_step_index=active_idx)
+            chart_code = generate_mermaid_chart(wf, active_step_index=active_idx, instance_status=inst["status"])
     except tk.ObjectNotFound:
         pass
 
