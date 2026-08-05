@@ -30,6 +30,10 @@ def _commit():
 def user_has_role(user_name: str | None, organization_id: str, required_role: str):
     if not user_name:
         return False
+
+    if authz.is_sysadmin(user_name):
+        return True
+
     if required_role.startswith("user:"):
         return user_name == required_role[5:]
     permission = {"member": "read", "editor": "create_dataset", "admin": "admin"}.get(required_role)
@@ -103,6 +107,7 @@ def start_workflow(package_dict: dict[str, Any], trigger: Literal["create", "upd
         model.Session.add(task)
 
     _commit()
+    rebuild(wf_inst.object_id)
 
     # If the first step is automated, run it recursively. Else notify assignees.
     first_step = wf.steps[0]
@@ -441,3 +446,5 @@ def _execute_automated_task(instance_id: str, sequence: int):
         # Use transition logic for failure
         failure_transition = actions_dict.get("on_failure_transition") or "reject"
         _execute_transition(instance, sequence, failure_transition, "system", "Failed to trigger automated task")
+
+    rebuild(instance.object_id)

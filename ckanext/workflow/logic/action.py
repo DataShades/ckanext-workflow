@@ -306,26 +306,31 @@ def workflow_user_task_list(context: types.Context, data_dict: dict[str, Any]) -
     """List pending tasks for the logged in user."""
     tk.check_access("workflow_user_task_list", context, data_dict)
 
-    pending_tasks = (
-        model.Session.query(WorkflowTask)
+    stmt = (
+        sa.select(WorkflowTask)
         .join(WorkflowInstance)
-        .filter(WorkflowTask.status == "pending", WorkflowInstance.status.in_(["active", "overdue"]))
-        .all()
+        .where(
+            WorkflowInstance.status.in_(["active", "overdue"]),
+            WorkflowInstance.current_step_index == WorkflowTask.sequence,
+        )
     )
+    pending_tasks = model.Session.scalars(stmt)
 
     tasks: list[dict[str, Any]] = []
+
     for task in pending_tasks:
-        if task.sequence != task.instance.current_step_index:
+        inst = task.instance
+
+        try:
+            pkg = tk.get_action("package_show")({"ignore_auth": True}, {"id": inst.object_id})
+        except tk.ObjectNotFound:
+            log.warning("Error retrieving package '%s' for user task", inst.object_id)
             continue
 
-        object_id = task.instance.object_id
-        try:
-            pkg = tk.get_action("package_show")({"ignore_auth": True}, {"id": object_id})
-            org_id = pkg.get("owner_org")
-            if user_has_role(context["user"], org_id, task.assigned_role):
-                tasks.append({"task": task, "package": pkg, "instance": task.instance})
-        except Exception:
-            log.exception("Error retrieving package for user task")
+        org_id = pkg.get("owner_org")
+
+        if user_has_role(context["user"], org_id, task.assigned_role):
+            tasks.append({"task": task, "package": pkg, "instance": inst})
 
     results: list[dict[str, Any]] = [
         {

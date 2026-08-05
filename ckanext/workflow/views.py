@@ -190,7 +190,9 @@ def get_node_for_transition(transition_str: str | None, current_index: int, step
     return "Rejected([Rejected])"
 
 
-def generate_mermaid_chart(workflow: dict[str, Any], active_step_index: int | None = None, instance_status: str | None = None):
+def generate_mermaid_chart(
+    workflow: dict[str, Any], active_step_index: int | None = None, instance_status: str | None = None
+):
     lines = ["graph TD", "    Start([Start: Dataset Created])"]
 
     steps = workflow.get("steps", [])
