@@ -128,6 +128,9 @@ def move_to_next_stage(context, data_dict):
     next_stage = stage.approve()
     field_name = workflow_helpers._workflow_stage_field()
 
+    if next_stage is None:
+        return {field_name: str(stage)}
+
     _update_workflow_stage(field_name, str(next_stage), context['package'])
 
     if callable(stage.approval_effect):
@@ -149,6 +152,10 @@ def move_to_previous_stage(context, data_dict):
         context, data_dict, 'move_to_previous_stage')
     next_stage = stage.reject()
     field_name = workflow_helpers._workflow_stage_field()
+
+    if next_stage is None:
+        return {field_name: str(stage)}
+
     _update_workflow_stage(field_name, str(next_stage), context['package'])
 
     if callable(stage.rejection_effect):
