@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import pytest
@@ -36,7 +35,7 @@ class TestWorkflowDefinitionActions:
             "description": "My test workflow description",
             "enabled": True,
             "trigger_type": "dataset_create",
-            "dataset_type": "all",
+            "object_type": "dataset",
             "steps": steps,
         }
 
@@ -48,7 +47,7 @@ class TestWorkflowDefinitionActions:
 
     def test_workflow_definition_update(self):
         wf = WorkflowDefinition(
-            name="Old Name", description="Old Desc", enabled=True, trigger_type="dataset_create", dataset_type="all"
+            name="Old Name", description="Old Desc", enabled=True, trigger_type="dataset_create", object_type="dataset"
         )
         model.Session.add(wf)
         model.Session.flush()
@@ -65,7 +64,7 @@ class TestWorkflowDefinitionActions:
             "description": "New Desc",
             "enabled": False,
             "trigger_type": "dataset_create",
-            "dataset_type": "all",
+            "object_type": "dataset",
             "steps": [
                 {
                     "name": "New Step 1",
@@ -84,7 +83,9 @@ class TestWorkflowDefinitionActions:
         assert result["steps"][0]["name"] == "New Step 1"
 
     def test_workflow_definition_show(self):
-        wf = WorkflowDefinition(name="Show Workflow", enabled=True, trigger_type="dataset_create", dataset_type="all")
+        wf = WorkflowDefinition(
+            name="Show Workflow", enabled=True, trigger_type="dataset_create", object_type="dataset"
+        )
         model.Session.add(wf)
         model.Session.commit()
 
@@ -92,7 +93,9 @@ class TestWorkflowDefinitionActions:
         assert result["name"] == "Show Workflow"
 
     def test_workflow_definition_delete(self):
-        wf = WorkflowDefinition(name="Delete Workflow", enabled=True, trigger_type="dataset_create", dataset_type="all")
+        wf = WorkflowDefinition(
+            name="Delete Workflow", enabled=True, trigger_type="dataset_create", object_type="dataset"
+        )
         model.Session.add(wf)
         model.Session.commit()
 
@@ -119,7 +122,7 @@ class TestWorkflowExecution:
             name="Publication Flow",
             enabled=True,
             trigger_type="dataset_create",
-            dataset_type="all",
+            object_type="dataset",
             steps=[
                 {
                     "name": "Editor Approval",
@@ -186,7 +189,7 @@ class TestWorkflowExecution:
             name="Confidential Flow",
             enabled=True,
             trigger_type="dataset_create",
-            dataset_type="all",
+            object_type="dataset",
             steps=[
                 {
                     "name": "User 1 Review",
@@ -226,7 +229,7 @@ class TestWorkflowExecution:
             name="Timeout Flow",
             enabled=True,
             trigger_type="dataset_create",
-            dataset_type="all",
+            object_type="dataset",
             steps=steps,
         )
 
@@ -252,7 +255,7 @@ class TestWorkflowExecution:
             name="Update Flow",
             enabled=True,
             trigger_type=["update", "manual"],
-            dataset_type="all",
+            object_type="dataset",
             steps=[
                 {
                     "name": "Step 1",
@@ -291,7 +294,7 @@ class TestWorkflowExecution:
             name="Rejection Loop Flow",
             enabled=True,
             trigger_type="dataset_create",
-            dataset_type="all",
+            object_type="dataset",
             steps=[
                 {
                     "name": "Initial Manual Task",
@@ -359,7 +362,7 @@ class TestWorkflowExecution:
             name="Branching Flow",
             enabled=True,
             trigger_type="dataset_create",
-            dataset_type="all",
+            object_type="dataset",
             steps=[
                 {
                     "name": "Decision Step",
@@ -409,7 +412,7 @@ class TestWorkflowExecution:
             name="Constraint Flow",
             enabled=True,
             trigger_type="dataset_create",
-            dataset_type="all",
+            object_type="dataset",
             steps=[
                 {
                     "name": "Step 1",
@@ -441,7 +444,7 @@ class TestWorkflowExecution:
                 name="Constraint Flow",
                 enabled=True,
                 trigger_type="dataset_create",
-                dataset_type="all",
+                object_type="dataset",
                 steps=[
                     {
                         "name": "Step 1",
@@ -462,7 +465,7 @@ class TestWorkflowExecution:
                 name="Constraint Flow",
                 enabled=True,
                 trigger_type="dataset_create",
-                dataset_type="all",
+                object_type="dataset",
                 steps=[
                     {
                         "name": "Step 1",
@@ -489,7 +492,7 @@ class TestWorkflowExecution:
             name="Constraint Flow Updated",
             enabled=True,
             trigger_type="dataset_create",
-            dataset_type="all",
+            object_type="dataset",
             steps=[
                 {
                     "name": "Step 1 Renamed",  # Renamed name is ok

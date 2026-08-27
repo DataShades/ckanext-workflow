@@ -36,7 +36,7 @@
                     <tr>
                         {{ ui.table_cell(wf.name) }}
                         {{ ui.table_cell(wf.description or ui.empty(_("No description"))) }}
-                        {{ ui.table_cell(ui.badge("{} ({})".format(wf.dataset_type, wf.trigger_type))) }}
+                        {{ ui.table_cell(ui.badge("{} ({})".format(wf.object_type, wf.trigger_type))) }}
 
                         {%- set num_steps = wf.steps|length -%}
                         {{ ui.table_cell(ungettext("{num} step", "{num} steps", num_steps).format(num=num_steps)) }}

@@ -25,8 +25,7 @@ def upgrade():
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("enabled", sa.Boolean(), nullable=False),
         sa.Column("trigger_type", sa.Text(), nullable=False),
-        sa.Column("dataset_type", sa.Text(), nullable=False),
-        sa.Column("metadata_template", sa.Text(), nullable=True),
+        sa.Column("object_type", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )

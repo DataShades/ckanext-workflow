@@ -43,30 +43,18 @@ def user_has_role(user_name: str | None, organization_id: str, required_role: st
 
 
 def start_workflow(package_dict: dict[str, Any], trigger: Literal["create", "update", "manual"] = "manual"):
-    dataset_type = package_dict.get("type", "dataset")
+    object_type = package_dict.get("type", "dataset")
     # First check specific trigger/type match
 
     wf = model.Session.scalar(
         sa.select(WorkflowDefinition).where(
             sa.and_(
                 WorkflowDefinition.enabled == sa.true(),
-                WorkflowDefinition.dataset_type == dataset_type,
+                WorkflowDefinition.object_type == object_type,
                 WorkflowDefinition.trigger_type.like(f"%{trigger}%"),
             )
         )
     )
-
-    if not wf:
-        # Fall back to default trigger on all datasets
-        wf = model.Session.scalar(
-            sa.select(WorkflowDefinition).where(
-                sa.and_(
-                    WorkflowDefinition.enabled == sa.true(),
-                    WorkflowDefinition.dataset_type == "all",
-                    WorkflowDefinition.trigger_type.like(f"%{trigger}%"),
-                )
-            )
-        )
 
     if not wf or not wf.steps:
         return None

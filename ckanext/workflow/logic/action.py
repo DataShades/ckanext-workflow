@@ -32,7 +32,7 @@ def workflow_definition_create(context: types.Context, data_dict: dict[str, Any]
     :param description: Optional description of the workflow
     :param enabled: Enable/disable the workflow. Defaults to True.
     :param trigger_type: Trigger type, defaults to "dataset_create"
-    :param dataset_type: Dataset trigger type, defaults to "all"
+    :param object_type: Dataset trigger type, defaults to "dataset"
     :param steps: Optional list of step configuration dicts
     """
     tk.check_access("workflow_definition_create", context, data_dict)
@@ -42,8 +42,7 @@ def workflow_definition_create(context: types.Context, data_dict: dict[str, Any]
         description=data_dict.get("description"),
         enabled=data_dict["enabled"],
         trigger_type=data_dict["trigger_type"],
-        dataset_type=data_dict["dataset_type"],
-        metadata_template=None,
+        object_type=data_dict["object_type"],
     )
     model.Session.add(wf)
     model.Session.flush()
@@ -76,7 +75,7 @@ def workflow_definition_update(context: types.Context, data_dict: dict[str, Any]
     :param description: Optional description of the workflow
     :param enabled: Optional boolean to enable/disable the workflow. Defaults to True.
     :param trigger_type: Trigger type
-    :param dataset_type: Dataset trigger type
+    :param object_type: Dataset trigger type
     :param steps: Optional list of step configuration dicts
     """
     tk.check_access("workflow_definition_update", context, data_dict)
@@ -112,8 +111,7 @@ def workflow_definition_update(context: types.Context, data_dict: dict[str, Any]
     wf.description = data_dict.get("description")
     wf.enabled = data_dict["enabled"]
     wf.trigger_type = data_dict["trigger_type"]
-    wf.dataset_type = data_dict["dataset_type"]
-    wf.metadata_template = None
+    wf.object_type = data_dict["object_type"]
 
     # delete old steps
     model.Session.execute(sa.delete(WorkflowStep).where(WorkflowStep.workflow_id == wf.id))

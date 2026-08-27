@@ -54,7 +54,7 @@ class TestWorkflowPermissionLabels:
         wf_def = WorkflowDefinition(
             name="Mock Workflow Definition",
             trigger_type="dataset_create",
-            dataset_type="all"
+            object_type="dataset"
         )
         model.Session.add(wf_def)
         model.Session.commit()

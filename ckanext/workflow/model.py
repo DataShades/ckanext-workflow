@@ -21,8 +21,7 @@ class WorkflowDefinition(tk.BaseModel):
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("enabled", sa.Boolean, default=True, nullable=False),
         sa.Column("trigger_type", sa.Text, default="dataset_create", nullable=False),
-        sa.Column("dataset_type", sa.Text, default="all", nullable=False),
-        sa.Column("metadata_template", sa.Text, nullable=True),
+        sa.Column("object_type", sa.Text, default="dataset", nullable=False),
         sa.Column("created_at", sa.DateTime(True), server_default=sa.func.now(), nullable=False),
     )
 
@@ -31,8 +30,7 @@ class WorkflowDefinition(tk.BaseModel):
     description: Mapped[str | None]
     enabled: Mapped[bool]
     trigger_type: Mapped[str]
-    dataset_type: Mapped[str]
-    metadata_template: Mapped[str | None]
+    object_type: Mapped[str]
     created_at: Mapped[datetime.datetime]
 
     # Relationships

@@ -57,7 +57,7 @@ class TestWorkflowAuth:
 
         from ckanext.workflow.model import WorkflowDefinition, WorkflowInstance, WorkflowTask
 
-        wf_def = WorkflowDefinition(name="Test", trigger_type="dataset_create", dataset_type="all")
+        wf_def = WorkflowDefinition(name="Test", trigger_type="dataset_create", object_type="dataset")
         model.Session.add(wf_def)
         model.Session.flush()
 
@@ -122,7 +122,7 @@ class TestWorkflowAuth:
 
         from ckanext.workflow.model import WorkflowDefinition, WorkflowInstance
 
-        wf_def = WorkflowDefinition(name="Test", trigger_type="dataset_create", dataset_type="all")
+        wf_def = WorkflowDefinition(name="Test", trigger_type="dataset_create", object_type="dataset")
         model.Session.add(wf_def)
         model.Session.flush()
 

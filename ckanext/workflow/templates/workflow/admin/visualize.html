@@ -13,7 +13,7 @@
                 <strong>{{ _("Trigger Type:") }}</strong> {{ workflow.trigger_type }}
             {%- endcall %}
             {%- call ui.util.call(ui.list_item) -%}
-                <strong>{{ _("Dataset Trigger:") }}</strong> {{ workflow.dataset_type }}
+                <strong>{{ _("Dataset Trigger:") }}</strong> {{ workflow.object_type }}
             {%- endcall %}
             {%- call ui.util.call(ui.list_item) -%}
                 {%- with num=workflow.steps|length -%}
