@@ -16,22 +16,22 @@ permission labels.
 
 Admin view to manage all configured workflow definitions.
 
-[![Definition list](./screenshots/definition_list.html)]
+[![Definition list](./screenshots/definition_list.png)]
 
 ### 2. Workflow Builder
 Form showing dynamic step cards, timeouts, assignee selector, and branching path configurations.
 
-[![Definition list](./screenshots/builder.html)]
+[![Definition list](./screenshots/builder.png)]
 
 ### 3. Dataset Workflow Visualizer
 Interactive Mermaid.js chart rendering step structures, decision nodes, and current progress.
 
-[![Definition list](./screenshots/vizualizer.html)]
+[![Definition list](./screenshots/vizualizer.png)]
 
 ### 4. User Task Dashboard
 My Tasks workspace displaying pending approvals, decisions, manual steps, and notifications.
 
-[![Definition list](./screenshots/user_dashboard.html)]
+[![Definition list](./screenshots/user_dashboard.png)]
 
 ---
 
